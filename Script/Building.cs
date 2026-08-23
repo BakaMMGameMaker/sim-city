@@ -16,17 +16,17 @@ public partial class Building : Node3D
 	[Export]
 	public float BuildTime = 6.0f;
 
-	/// <summary>占地宽度（栅格数，必须为正整数）</summary>
 	[Export]
-	public int FootprintWidth = 4;
+	public int FoundationWidth = 4;
 
-	/// <summary>占地深度（栅格数，必须为正整数）</summary>
 	[Export]
-	public int FootprintDepth = 4;
+	public int FoundationDepth = 4;
 
-	/// <summary>单个栅格的世界尺寸，需与 BuildController.GridSize 一致</summary>
 	[Export]
-	public float CellSize = 1.0f;
+	public float FoundationThickness = 0.06f;
+
+	[Export]
+	public float GridSize = 1.0f;
 
 	[Export]
 	public StandardMaterial3D BodyMaterial;
@@ -65,12 +65,11 @@ public partial class Building : Node3D
 	private enum Mode { Preview, Constructing, Idle }
 	private Mode _mode = Mode.Idle;
 
-	private const float FoundationThickness = 0.06f;
-
 	public override void _Ready()
 	{
 		AssertExports.AssertExportsNode(this);
 
+		_foundationInstance = GetNode<MeshInstance3D>("Foundation");
 		_bodyInstance = GetNode<MeshInstance3D>("Body");
 		_edgeComponent = GetNode<EdgeComponent>("EdgeComponent");
 
@@ -84,25 +83,17 @@ public partial class Building : Node3D
 		SetupEdgeComponent();
 	}
 
-	/// <summary>
-	/// 地面层：覆盖整个 Footprint，中心对齐 Building 原点。
-	/// </summary>
 	private void SetupFoundation()
 	{
-		float worldW = FootprintWidth * CellSize;
-		float worldD = FootprintDepth * CellSize;
+		float worldW = FoundationWidth * GridSize;
+		float worldD = FoundationDepth * GridSize;
 
-		_foundationInstance = new MeshInstance3D { Name = "Foundation" };
 		var box = new BoxMesh { Size = new Vector3(worldW, FoundationThickness, worldD) };
 		_foundationInstance.Mesh = box;
 		_foundationInstance.MaterialOverride = FoundationMaterial;
 		_foundationInstance.Position = new Vector3(0, FoundationThickness * 0.5f, 0);
-		AddChild(_foundationInstance);
 	}
 
-	/// <summary>
-	/// 建筑体中心对称：BoxMesh 以原点为中心，仅抬高到半高。
-	/// </summary>
 	private void SetupBody()
 	{
 		var box = new BoxMesh { Size = new Vector3(Width, Height, Depth) };
@@ -141,48 +132,39 @@ public partial class Building : Node3D
 		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(1.0f, Height));
 	}
 
-	public void SetValidPreview()
+	public void SetPreviewValid(bool valid)
 	{
 		if (_mode != Mode.Preview) return;
 
-		_bodyInstance.MaterialOverride = PreviewValidBodyMaterial;
-		_edgeComponent.SetMaterial(PreviewValidEdgeMaterial);
-		if (_foundationInstance != null)
-			_foundationInstance.MaterialOverride = PreviewValidFoundationMaterial;
-	}
+		var foundationMat = valid ? PreviewValidFoundationMaterial : PreviewInvalidFoundationMaterial;
+		var bodyMat = valid ? PreviewValidBodyMaterial : PreviewInvalidBodyMaterial;
+		var edgeMat = valid ? PreviewValidEdgeMaterial : PreviewInvalidEdgeMaterial;
 
-	public void SetInvalidPreview()
-	{
-		if (_mode != Mode.Preview) return;
-
-		_bodyInstance.MaterialOverride = PreviewInvalidBodyMaterial;
-		_edgeComponent.SetMaterial(PreviewInvalidEdgeMaterial);
-		if (_foundationInstance != null)
-			_foundationInstance.MaterialOverride = PreviewInvalidFoundationMaterial;
+		_foundationInstance.MaterialOverride = foundationMat;
+		_bodyInstance.MaterialOverride = bodyMat;
+		_edgeComponent.SetMaterial(edgeMat);
 	}
 
 	public void ExitPreview()
 	{
+		_foundationInstance.MaterialOverride = FoundationMaterial;
 		_bodyInstance.MaterialOverride = BodyMaterial;
 		_edgeComponent.SetMaterial(EdgeMaterial);
-		if (_foundationInstance != null)
-			_foundationInstance.MaterialOverride = FoundationMaterial;
 	}
 
 	public void StartConstruction()
 	{
 		_mode = Mode.Constructing;
 
+		_foundationInstance.MaterialOverride = FoundationMaterial;
 		_bodyInstance.MaterialOverride = BodyMaterial;
 		_edgeComponent.SetMaterial(EdgeMaterial);
-		if (_foundationInstance != null)
-			_foundationInstance.MaterialOverride = FoundationMaterial;
 
-		InitBuilding();
+		InitConstruction();
 		StartConstructionTween();
 	}
 
-	private void InitBuilding()
+	private void InitConstruction()
 	{
 		_bodyInstance.Scale = new Vector3(1, 0, 1);
 		_bodyInstance.Position = new Vector3(0, 0, 0);
@@ -208,24 +190,20 @@ public partial class Building : Node3D
 		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(scaleY, top));
 	}
 
-	/// <summary>
-	/// 占地矩形（世界坐标），中心为 Building 原点。
-	/// </summary>
 	public Rect2 GetFootprintRect()
 	{
-		float worldW = FootprintWidth * CellSize;
-		float worldD = FootprintDepth * CellSize;
+		float worldW = FoundationWidth * GridSize;
+		float worldD = FoundationDepth * GridSize;
 		float halfW = worldW * 0.5f;
 		float halfD = worldD * 0.5f;
 		return new Rect2(GlobalPosition.X - halfW, GlobalPosition.Z - halfD, worldW, worldD);
 	}
 
-	/// <summary>中心所在栅格</summary>
 	public Vector2I GetOriginCell()
 	{
 		return new Vector2I(
-			Mathf.RoundToInt(GlobalPosition.X / CellSize),
-			Mathf.RoundToInt(GlobalPosition.Z / CellSize)
+			Mathf.RoundToInt(GlobalPosition.X / GridSize),
+			Mathf.RoundToInt(GlobalPosition.Z / GridSize)
 		);
 	}
 }
