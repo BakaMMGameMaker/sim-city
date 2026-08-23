@@ -12,6 +12,7 @@ class BuildingConstructionState extends RefCounted:
 		scale_y_ = scale_y
 		top_ = top
 
+
 class EdgeData:
 	var instance_: MeshInstance3D
 	var updater_: Callable
@@ -20,8 +21,10 @@ class EdgeData:
 		instance_ = instance
 		updater_ = updater
 
+
 var _enabled: bool = true
 var _edges: Array[EdgeData] = []
+
 
 func setup(edge_material: StandardMaterial3D, edge_thickness: float) -> void:
 	material = edge_material
@@ -29,13 +32,27 @@ func setup(edge_material: StandardMaterial3D, edge_thickness: float) -> void:
 	_enabled = true
 	_clear_edges()
 
+
+func set_material(new_material: StandardMaterial3D) -> void:
+	material = new_material
+	for edge in _edges:
+		if is_instance_valid(edge.instance_):
+			edge.instance_.material_override = material
+
+
 func enable() -> void:
 	_enabled = true
-	# 显示 edges
+	for edge in _edges:
+		if is_instance_valid(edge.instance_):
+			edge.instance_.visible = true
+
 
 func disable() -> void:
 	_enabled = false
-	# 隐藏 edges
+	for edge in _edges:
+		if is_instance_valid(edge.instance_):
+			edge.instance_.visible = false
+
 
 func register_edge(edge_size: Vector3, base_position: Vector3, updater: Callable) -> void:
 	assert(_enabled, "组件未启用但尝试注册边")
@@ -44,11 +61,14 @@ func register_edge(edge_size: Vector3, base_position: Vector3, updater: Callable
 	mi.position = base_position
 	_edges.append(EdgeData.new(mi, updater))
 
+
 func update(state: BuildingConstructionState) -> void:
-	if not _enabled: return
+	if not _enabled:
+		return
 
 	for edge in _edges:
 		edge.updater_.call(edge.instance_, state)
+
 
 func _make_edge(size: Vector3) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
@@ -59,8 +79,10 @@ func _make_edge(size: Vector3) -> MeshInstance3D:
 	add_child(mi)
 	return mi
 
+
 func _clear_edges() -> void:
 	for edge_data in _edges:
-		var mi: MeshInstance3D = edge_data["instance"]
-		if is_instance_valid(mi): mi.queue_free()
+		var mi: MeshInstance3D = edge_data.instance_
+		if is_instance_valid(mi):
+			mi.queue_free()
 	_edges.clear()
