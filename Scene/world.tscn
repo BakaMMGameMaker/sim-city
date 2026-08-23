@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://b7l0eabdejswb"]
 
-[ext_resource type="Script" uid="uid://bbhwvfsgkkb1h" path="res://Script/camera_controller.gd" id="1_ejll3"]
+[ext_resource type="Script" path="res://Script/CameraController.cs" id="1_ejll3"]
 [ext_resource type="PackedScene" uid="uid://docox6jjqodt5" path="res://Scene/building.tscn" id="1_emx41"]
 [ext_resource type="PackedScene" uid="uid://2kkfqhq8mcy4" path="res://Scene/floor.tscn" id="2_dlwip"]
-[ext_resource type="Script" uid="uid://cehegl0ju4byt" path="res://Script/BuildController.gd" id="3_build"]
+[ext_resource type="Script" path="res://Script/BuildController.cs" id="3_build"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ahgxp"]
 sky_top_color = Color(0.09985284, 0.15170373, 0.2716998, 1)
