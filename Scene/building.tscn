@@ -11,12 +11,12 @@
 
 [node name="Building" type="Node3D" unique_id=1254101347]
 script = ExtResource("1_8saja")
-body_material = ExtResource("2_p48t8")
-edge_material = ExtResource("3_wyfv7")
-preview_valid_body_material = ExtResource("5_valid_body")
-preview_invalid_body_material = ExtResource("6_invalid_body")
-preview_valid_edge_material = ExtResource("7_valid_edge")
-preview_invalid_edge_material = ExtResource("8_invalid_edge")
+BodyMaterial = ExtResource("2_p48t8")
+EdgeMaterial = ExtResource("3_wyfv7")
+PreviewValidBodyMaterial = ExtResource("5_valid_body")
+PreviewInvalidBodyMaterial = ExtResource("6_invalid_body")
+PreviewValidEdgeMaterial = ExtResource("7_valid_edge")
+PreviewInvalidEdgeMaterial = ExtResource("8_invalid_edge")
 
 [node name="Body" type="MeshInstance3D" parent="." unique_id=407493475]
 
