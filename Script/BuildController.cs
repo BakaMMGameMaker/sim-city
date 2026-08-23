@@ -25,6 +25,7 @@ public partial class BuildController : Node3D
 	[Export]
 	public Button BuildListButton;
 
+	/// <summary>已占用的栅格单元格 (x, z)</summary>
 	private readonly HashSet<Vector2I> _occupiedCells = new();
 
 	private enum Mode { Idle, Dragging, Confirming }
@@ -32,6 +33,7 @@ public partial class BuildController : Node3D
 
 	private Building _preview;
 	private bool _previewValid;
+	private Vector3 _pendingPosition = Vector3.Zero;
 	private Vector2I? _lastOriginCell;
 
 	public override void _Ready()
@@ -137,8 +139,9 @@ public partial class BuildController : Node3D
 		_lastOriginCell = originCell;
 		_preview.Visible = true;
 		_preview.GlobalPosition = snapped;
+		_pendingPosition = snapped;
 
-		_previewValid = IsPositionValid(originCell, _preview.FoundationWidth, _preview.FoundationHeight);
+		_previewValid = IsPositionValid(originCell, _preview.FootprintWidth, _preview.FootprintDepth);
 		if (_previewValid)
 			_preview.SetValidPreview();
 		else
@@ -149,7 +152,7 @@ public partial class BuildController : Node3D
 	{
 		_mode = Mode.Confirming;
 
-		var screenPos = Camera.UnprojectPosition(_preview.GlobalPosition + new Vector3(0, _preview.Height * 0.6f, 0));
+		var screenPos = Camera.UnprojectPosition(_pendingPosition + new Vector3(0, _preview.Height * 0.6f, 0));
 		ConfirmPanel.Position = screenPos - ConfirmPanel.Size * 0.5f;
 		ConfirmPanel.Visible = true;
 	}
@@ -160,10 +163,10 @@ public partial class BuildController : Node3D
 
 		var realBuilding = BuildingScene.Instantiate<Building>();
 		AddChild(realBuilding);
-		realBuilding.GlobalPosition = _preview.GlobalPosition;
+		realBuilding.GlobalPosition = _pendingPosition;
 		realBuilding.StartConstruction();
 
-		OccupyCells(realBuilding.GetOriginCell(), realBuilding.FoundationWidth, realBuilding.FoundationHeight);
+		OccupyCells(realBuilding.GetOriginCell(), realBuilding.FootprintWidth, realBuilding.FootprintDepth);
 
 		CleanupPreview();
 		_mode = Mode.Idle;
@@ -202,11 +205,11 @@ public partial class BuildController : Node3D
 		return from + dir * t;
 	}
 
-	/// <summary>吸附到栅格最小角（Floor）</summary>
+	/// <summary>吸附到栅格点（中心对齐用 Round）</summary>
 	private Vector3 SnapToGrid(Vector3 pos)
 	{
-		float x = Mathf.Floor(pos.X / GridSize) * GridSize;
-		float z = Mathf.Floor(pos.Z / GridSize) * GridSize;
+		float x = Mathf.Round(pos.X / GridSize) * GridSize;
+		float z = Mathf.Round(pos.Z / GridSize) * GridSize;
 		return new Vector3(x, 0.0f, z);
 	}
 
@@ -218,30 +221,39 @@ public partial class BuildController : Node3D
 		);
 	}
 
-	private bool IsPositionValid(Vector2I originCell, int footprintWidth, int footprintDepth)
+	/// <summary>
+	/// 以中心格为基准，向两侧扩展 footprint（例如 4 格 → center-2 .. center+1）。
+	/// </summary>
+	private bool IsPositionValid(Vector2I centerCell, int footprintWidth, int footprintDepth)
 	{
+		int startX = centerCell.X - footprintWidth / 2;
+		int startZ = centerCell.Y - footprintDepth / 2;
+
 		for (int x = 0; x < footprintWidth; x++)
 		{
 			for (int z = 0; z < footprintDepth; z++)
 			{
-				if (_occupiedCells.Contains(new Vector2I(originCell.X + x, originCell.Y + z)))
+				if (_occupiedCells.Contains(new Vector2I(startX + x, startZ + z)))
 					return false;
 			}
 		}
 		return true;
 	}
 
-	private void OccupyCells(Vector2I originCell, int footprintWidth, int footprintDepth)
+	private void OccupyCells(Vector2I centerCell, int footprintWidth, int footprintDepth)
 	{
+		int startX = centerCell.X - footprintWidth / 2;
+		int startZ = centerCell.Y - footprintDepth / 2;
+
 		for (int x = 0; x < footprintWidth; x++)
 		{
 			for (int z = 0; z < footprintDepth; z++)
-				_occupiedCells.Add(new Vector2I(originCell.X + x, originCell.Y + z));
+				_occupiedCells.Add(new Vector2I(startX + x, startZ + z));
 		}
 	}
 
-	public void RegisterOccupiedCells(Vector2I originCell, int footprintWidth, int footprintDepth)
+	public void RegisterOccupiedCells(Vector2I centerCell, int footprintWidth, int footprintDepth)
 	{
-		OccupyCells(originCell, footprintWidth, footprintDepth);
+		OccupyCells(centerCell, footprintWidth, footprintDepth);
 	}
 }

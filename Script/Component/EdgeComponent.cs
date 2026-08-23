@@ -25,7 +25,7 @@ public partial class EdgeComponent : Node3D
 
 	/// <summary>
 	/// Building 只提供长宽高与三种 updater，边的注册由 Component 内部完成。
-	/// 建筑体按角落对齐：XZ 范围 [0, Width] x [0, Depth]。
+	/// 建筑体中心对称：XZ 范围 [-Width/2, Width/2] x [-Depth/2, Depth/2]。
 	/// </summary>
 	public class EdgeSetupConfig
 	{
@@ -103,8 +103,8 @@ public partial class EdgeComponent : Node3D
 
 	private void RegisterAllEdges(EdgeSetupConfig config)
 	{
-		float w = config.Width;
-		float d = config.Depth;
+		float halfX = config.Width * 0.5f;
+		float halfZ = config.Depth * 0.5f;
 		float h = config.Height;
 		float t = config.Thickness;
 
@@ -112,24 +112,24 @@ public partial class EdgeComponent : Node3D
 		var top = config.TopUpdater ?? ((_, _) => { });
 		var bottom = config.BottomUpdater ?? ((_, _) => { });
 
-		// 竖直棱：建筑体四个角 (0/w, 0/d)
-		foreach (float x in new[] { 0f, w })
+		// 竖直棱：体块四个角 ±half
+		foreach (float x in new[] { -halfX, halfX })
 		{
-			foreach (float z in new[] { 0f, d })
+			foreach (float z in new[] { -halfZ, halfZ })
 				RegisterEdge(new Vector3(t, h, t), new Vector3(x, 0, z), vertical);
 		}
 
 		// 顶边
-		foreach (float z in new[] { 0f, d })
-			RegisterEdge(new Vector3(w, t, t), new Vector3(w * 0.5f, 0, z), top);
-		foreach (float x in new[] { 0f, w })
-			RegisterEdge(new Vector3(t, t, d), new Vector3(x, 0, d * 0.5f), top);
+		foreach (float z in new[] { -halfZ, halfZ })
+			RegisterEdge(new Vector3(config.Width, t, t), new Vector3(0, 0, z), top);
+		foreach (float x in new[] { -halfX, halfX })
+			RegisterEdge(new Vector3(t, t, config.Depth), new Vector3(x, 0, 0), top);
 
 		// 底边
-		foreach (float z in new[] { 0f, d })
-			RegisterEdge(new Vector3(w, t, t), new Vector3(w * 0.5f, 0, z), bottom);
-		foreach (float x in new[] { 0f, w })
-			RegisterEdge(new Vector3(t, t, d), new Vector3(x, 0, d * 0.5f), bottom);
+		foreach (float z in new[] { -halfZ, halfZ })
+			RegisterEdge(new Vector3(config.Width, t, t), new Vector3(0, 0, z), bottom);
+		foreach (float x in new[] { -halfX, halfX })
+			RegisterEdge(new Vector3(t, t, config.Depth), new Vector3(x, 0, 0), bottom);
 	}
 
 	private void RegisterEdge(Vector3 edgeSize, Vector3 basePosition, Action<MeshInstance3D, BuildingConstructionState> updater)
