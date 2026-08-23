@@ -23,6 +23,22 @@ public partial class EdgeComponent : Node3D
 		}
 	}
 
+	/// <summary>
+	/// Building 只提供长宽高与三种 updater，边的注册由 Component 内部完成。
+	/// 建筑体按角落对齐：XZ 范围 [0, Width] x [0, Depth]。
+	/// </summary>
+	public class EdgeSetupConfig
+	{
+		public float Width;
+		public float Depth;
+		public float Height;
+		public float Thickness = 0.07f;
+		public StandardMaterial3D Material;
+		public Action<MeshInstance3D, BuildingConstructionState> VerticalUpdater;
+		public Action<MeshInstance3D, BuildingConstructionState> TopUpdater;
+		public Action<MeshInstance3D, BuildingConstructionState> BottomUpdater;
+	}
+
 	private class EdgeData
 	{
 		public MeshInstance3D Instance { get; }
@@ -38,12 +54,13 @@ public partial class EdgeComponent : Node3D
 	private bool _enabled = true;
 	private readonly List<EdgeData> _edges = new();
 
-	public void Setup(StandardMaterial3D edgeMaterial, float edgeThickness)
+	public void Setup(EdgeSetupConfig config)
 	{
-		Material = edgeMaterial;
-		Thickness = edgeThickness;
+		Material = config.Material;
+		Thickness = config.Thickness;
 		_enabled = true;
 		ClearEdges();
+		RegisterAllEdges(config);
 	}
 
 	public void SetMaterial(StandardMaterial3D newMaterial)
@@ -52,9 +69,7 @@ public partial class EdgeComponent : Node3D
 		foreach (var edge in _edges)
 		{
 			if (IsInstanceValid(edge.Instance))
-			{
 				edge.Instance.MaterialOverride = Material;
-			}
 		}
 	}
 
@@ -78,23 +93,52 @@ public partial class EdgeComponent : Node3D
 		}
 	}
 
-	public void RegisterEdge(Vector3 edgeSize, Vector3 basePosition, Action<MeshInstance3D, BuildingConstructionState> updater)
+	public void Update(BuildingConstructionState state)
+	{
+		if (!_enabled) return;
+
+		foreach (var edge in _edges)
+			edge.Updater(edge.Instance, state);
+	}
+
+	private void RegisterAllEdges(EdgeSetupConfig config)
+	{
+		float w = config.Width;
+		float d = config.Depth;
+		float h = config.Height;
+		float t = config.Thickness;
+
+		var vertical = config.VerticalUpdater ?? ((_, _) => { });
+		var top = config.TopUpdater ?? ((_, _) => { });
+		var bottom = config.BottomUpdater ?? ((_, _) => { });
+
+		// 竖直棱：建筑体四个角 (0/w, 0/d)
+		foreach (float x in new[] { 0f, w })
+		{
+			foreach (float z in new[] { 0f, d })
+				RegisterEdge(new Vector3(t, h, t), new Vector3(x, 0, z), vertical);
+		}
+
+		// 顶边
+		foreach (float z in new[] { 0f, d })
+			RegisterEdge(new Vector3(w, t, t), new Vector3(w * 0.5f, 0, z), top);
+		foreach (float x in new[] { 0f, w })
+			RegisterEdge(new Vector3(t, t, d), new Vector3(x, 0, d * 0.5f), top);
+
+		// 底边
+		foreach (float z in new[] { 0f, d })
+			RegisterEdge(new Vector3(w, t, t), new Vector3(w * 0.5f, 0, z), bottom);
+		foreach (float x in new[] { 0f, w })
+			RegisterEdge(new Vector3(t, t, d), new Vector3(x, 0, d * 0.5f), bottom);
+	}
+
+	private void RegisterEdge(Vector3 edgeSize, Vector3 basePosition, Action<MeshInstance3D, BuildingConstructionState> updater)
 	{
 		System.Diagnostics.Debug.Assert(_enabled, "组件未启用但尝试注册边");
 
 		var mi = MakeEdge(edgeSize);
 		mi.Position = basePosition;
 		_edges.Add(new EdgeData(mi, updater));
-	}
-
-	public void Update(BuildingConstructionState state)
-	{
-		if (!_enabled) return;
-
-		foreach (var edge in _edges)
-		{
-			edge.Updater(edge.Instance, state);
-		}
 	}
 
 	private MeshInstance3D MakeEdge(Vector3 size)

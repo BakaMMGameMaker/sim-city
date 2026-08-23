@@ -16,8 +16,17 @@ public partial class Building : Node3D
 	[Export]
 	public float BuildTime = 6.0f;
 
+	/// <summary>占地宽度（栅格数，必须为正整数）</summary>
 	[Export]
-	public Vector2 FootprintSize = new Vector2(4.0f, 4.0f);
+	public int FootprintWidth = 4;
+
+	/// <summary>占地深度（栅格数，必须为正整数）</summary>
+	[Export]
+	public int FootprintDepth = 4;
+
+	/// <summary>单个栅格的世界尺寸，需与 BuildController.GridSize 一致</summary>
+	[Export]
+	public float CellSize = 1.0f;
 
 	[Export]
 	public StandardMaterial3D BodyMaterial;
@@ -27,6 +36,9 @@ public partial class Building : Node3D
 
 	[Export]
 	public float EdgeThickness = 0.07f;
+
+	[Export]
+	public StandardMaterial3D FoundationMaterial;
 
 	[Export]
 	public StandardMaterial3D PreviewValidBodyMaterial;
@@ -40,11 +52,20 @@ public partial class Building : Node3D
 	[Export]
 	public StandardMaterial3D PreviewInvalidEdgeMaterial;
 
+	[Export]
+	public StandardMaterial3D PreviewValidFoundationMaterial;
+
+	[Export]
+	public StandardMaterial3D PreviewInvalidFoundationMaterial;
+
 	private MeshInstance3D _bodyInstance;
+	private MeshInstance3D _foundationInstance;
 	private EdgeComponent _edgeComponent;
 
 	private enum Mode { Preview, Constructing, Idle }
 	private Mode _mode = Mode.Idle;
+
+	private const float FoundationThickness = 0.06f;
 
 	public override void _Ready()
 	{
@@ -58,86 +79,67 @@ public partial class Building : Node3D
 
 	private void SetupBuilding()
 	{
+		SetupFoundation();
 		SetupBody();
 		SetupEdgeComponent();
 	}
 
+	/// <summary>
+	/// 地面层：覆盖整个 Footprint 区域，体现实际占据空间。
+	/// Building 原点为占地矩形的最小角（min corner）。
+	/// </summary>
+	private void SetupFoundation()
+	{
+		float worldW = FootprintWidth * CellSize;
+		float worldD = FootprintDepth * CellSize;
+
+		_foundationInstance = new MeshInstance3D { Name = "Foundation" };
+		var box = new BoxMesh { Size = new Vector3(worldW, FoundationThickness, worldD) };
+		_foundationInstance.Mesh = box;
+		_foundationInstance.MaterialOverride = FoundationMaterial;
+		// 中心落在 footprint 中心，底面贴地
+		_foundationInstance.Position = new Vector3(worldW * 0.5f, FoundationThickness * 0.5f, worldD * 0.5f);
+		AddChild(_foundationInstance);
+	}
+
+	/// <summary>
+	/// 建筑体顶着 Footprint 的最小角（原点）：体块占据 [0,Width] x [0,Depth]。
+	/// </summary>
 	private void SetupBody()
 	{
 		var box = new BoxMesh { Size = new Vector3(Width, Height, Depth) };
 		_bodyInstance.Mesh = box;
 		_bodyInstance.MaterialOverride = BodyMaterial;
+		_bodyInstance.Position = new Vector3(Width * 0.5f, Height * 0.5f, Depth * 0.5f);
 	}
 
 	private void SetupEdgeComponent()
 	{
-		_edgeComponent.Setup(EdgeMaterial, EdgeThickness);
-		RegisterEdges();
-	}
-
-	private void RegisterEdges()
-	{
-		float halfX = Width * 0.5f;
-		float halfZ = Depth * 0.5f;
-
-		RegisterVerticalEdges(halfX, halfZ, EdgeThickness);
-		RegisterTopEdges(halfX, halfZ, EdgeThickness);
-		RegisterBottomEdges(halfX, halfZ, EdgeThickness);
-	}
-
-	private void RegisterVerticalEdges(float halfX, float halfZ, float t)
-	{
-		Action<MeshInstance3D, EdgeComponent.BuildingConstructionState> updater = (node, state) =>
+		_edgeComponent.Setup(new EdgeComponent.EdgeSetupConfig
 		{
-			node.Scale = new Vector3(node.Scale.X, state.ScaleY, node.Scale.Z);
-			node.Position = new Vector3(node.Position.X, state.Top / 2f, node.Position.Z);
-		};
-
-		foreach (float x in new[] { -halfX, halfX })
-		{
-			foreach (float z in new[] { -halfZ, halfZ })
+			Width = Width,
+			Depth = Depth,
+			Height = Height,
+			Thickness = EdgeThickness,
+			Material = EdgeMaterial,
+			VerticalUpdater = (node, state) =>
 			{
-				_edgeComponent.RegisterEdge(new Vector3(t, Height, t), new Vector3(x, 0, z), updater);
-			}
-		}
-	}
-
-	private void RegisterTopEdges(float halfX, float halfZ, float t)
-	{
-		Action<MeshInstance3D, EdgeComponent.BuildingConstructionState> updater = (node, state) =>
-		{
-			node.Position = new Vector3(node.Position.X, state.Top, node.Position.Z);
-		};
-
-		foreach (float z in new[] { -halfZ, halfZ })
-		{
-			_edgeComponent.RegisterEdge(new Vector3(Width, t, t), new Vector3(0, 0, z), updater);
-		}
-		foreach (float x in new[] { -halfX, halfX })
-		{
-			_edgeComponent.RegisterEdge(new Vector3(t, t, Depth), new Vector3(x, 0, 0), updater);
-		}
-	}
-
-	private void RegisterBottomEdges(float halfX, float halfZ, float t)
-	{
-		Action<MeshInstance3D, EdgeComponent.BuildingConstructionState> updater = (_, _) => { };
-
-		foreach (float z in new[] { -halfZ, halfZ })
-		{
-			_edgeComponent.RegisterEdge(new Vector3(Width, t, t), new Vector3(0, 0, z), updater);
-		}
-		foreach (float x in new[] { -halfX, halfX })
-		{
-			_edgeComponent.RegisterEdge(new Vector3(t, t, Depth), new Vector3(x, 0, 0), updater);
-		}
+				node.Scale = new Vector3(node.Scale.X, state.ScaleY, node.Scale.Z);
+				node.Position = new Vector3(node.Position.X, state.Top / 2f, node.Position.Z);
+			},
+			TopUpdater = (node, state) =>
+			{
+				node.Position = new Vector3(node.Position.X, state.Top, node.Position.Z);
+			},
+			BottomUpdater = (_, _) => { },
+		});
 	}
 
 	public void EnterPreview()
 	{
 		_mode = Mode.Preview;
 		_bodyInstance.Scale = Vector3.One;
-		_bodyInstance.Position = new Vector3(_bodyInstance.Position.X, Height / 2f, _bodyInstance.Position.Z);
+		_bodyInstance.Position = new Vector3(Width * 0.5f, Height * 0.5f, Depth * 0.5f);
 		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(1.0f, Height));
 	}
 
@@ -147,6 +149,8 @@ public partial class Building : Node3D
 
 		_bodyInstance.MaterialOverride = PreviewValidBodyMaterial;
 		_edgeComponent.SetMaterial(PreviewValidEdgeMaterial);
+		if (_foundationInstance != null)
+			_foundationInstance.MaterialOverride = PreviewValidFoundationMaterial;
 	}
 
 	public void SetInvalidPreview()
@@ -155,12 +159,16 @@ public partial class Building : Node3D
 
 		_bodyInstance.MaterialOverride = PreviewInvalidBodyMaterial;
 		_edgeComponent.SetMaterial(PreviewInvalidEdgeMaterial);
+		if (_foundationInstance != null)
+			_foundationInstance.MaterialOverride = PreviewInvalidFoundationMaterial;
 	}
 
 	public void ExitPreview()
 	{
 		_bodyInstance.MaterialOverride = BodyMaterial;
 		_edgeComponent.SetMaterial(EdgeMaterial);
+		if (_foundationInstance != null)
+			_foundationInstance.MaterialOverride = FoundationMaterial;
 	}
 
 	public void StartConstruction()
@@ -169,6 +177,8 @@ public partial class Building : Node3D
 
 		_bodyInstance.MaterialOverride = BodyMaterial;
 		_edgeComponent.SetMaterial(EdgeMaterial);
+		if (_foundationInstance != null)
+			_foundationInstance.MaterialOverride = FoundationMaterial;
 
 		InitBuilding();
 		StartConstructionTween();
@@ -176,18 +186,8 @@ public partial class Building : Node3D
 
 	private void InitBuilding()
 	{
-		InitBodyInstance();
-		InitEdgeComponent();
-	}
-
-	private void InitBodyInstance()
-	{
 		_bodyInstance.Scale = new Vector3(1, 0, 1);
-		_bodyInstance.Position = new Vector3(_bodyInstance.Position.X, 0, _bodyInstance.Position.Z);
-	}
-
-	private void InitEdgeComponent()
-	{
+		_bodyInstance.Position = new Vector3(Width * 0.5f, 0, Depth * 0.5f);
 		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(0.0f, 0.0f));
 	}
 
@@ -205,19 +205,26 @@ public partial class Building : Node3D
 		float top = progress * Height;
 
 		_bodyInstance.Scale = new Vector3(1, scaleY, 1);
-		_bodyInstance.Position = new Vector3(_bodyInstance.Position.X, top / 2f, _bodyInstance.Position.Z);
+		_bodyInstance.Position = new Vector3(Width * 0.5f, top / 2f, Depth * 0.5f);
 
 		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(scaleY, top));
 	}
 
+	/// <summary>
+	/// 占地矩形（世界坐标），原点为最小角。
+	/// </summary>
 	public Rect2 GetFootprintRect()
 	{
-		var half = FootprintSize * 0.5f;
-		return new Rect2(
-			GlobalPosition.X - half.X,
-			GlobalPosition.Z - half.Y,
-			FootprintSize.X,
-			FootprintSize.Y
+		float worldW = FootprintWidth * CellSize;
+		float worldD = FootprintDepth * CellSize;
+		return new Rect2(GlobalPosition.X, GlobalPosition.Z, worldW, worldD);
+	}
+
+	public Vector2I GetOriginCell()
+	{
+		return new Vector2I(
+			Mathf.RoundToInt(GlobalPosition.X / CellSize),
+			Mathf.RoundToInt(GlobalPosition.Z / CellSize)
 		);
 	}
 }

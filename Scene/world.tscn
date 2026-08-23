@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://docox6jjqodt5" path="res://Scene/building.tscn" id="1_emx41"]
 [ext_resource type="PackedScene" uid="uid://2kkfqhq8mcy4" path="res://Scene/floor.tscn" id="2_dlwip"]
 [ext_resource type="Script" path="res://Script/BuildController.cs" id="3_build"]
+[ext_resource type="Script" path="res://Script/GridVisualizer.cs" id="4_grid"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ahgxp"]
 sky_top_color = Color(0.09985284, 0.15170373, 0.2716998, 1)
@@ -27,6 +28,11 @@ transform = Transform3D(0.70710677, -0.35355338, 0.6123724, 0, 0.8660254, 0.5, -
 script = ExtResource("1_ejll3")
 
 [node name="Floor" parent="." unique_id=583659280 instance=ExtResource("2_dlwip")]
+
+[node name="GridVisualizer" type="Node3D" parent="." unique_id=900100001]
+script = ExtResource("4_grid")
+GridSize = 1.0
+Extent = 20
 
 [node name="BuildController" type="Node3D" parent="." unique_id=1417499137 node_paths=PackedStringArray("Camera", "ConfirmPanel", "ConfirmButton", "CancelButton", "BuildListButton")]
 script = ExtResource("3_build")
