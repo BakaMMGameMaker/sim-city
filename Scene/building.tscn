@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://docox6jjqodt5"]
+
+[ext_resource type="Script" uid="uid://u6v8n42va2w1" path="res://Script/Building.gd" id="1_8saja"]
+[ext_resource type="Material" uid="uid://cd48pnwgfwori" path="res://Material/neon_blue.tres" id="2_p48t8"]
+[ext_resource type="Material" uid="uid://dfogawys884er" path="res://Material/neon_dark_blue.tres" id="3_wyfv7"]
+[ext_resource type="Script" uid="uid://b0dxp62v04msx" path="res://Script/Component/EdgeComponent.gd" id="4_7grcv"]
+
+[node name="Building" type="Node3D" unique_id=1548575139]
+script = ExtResource("1_8saja")
+body_material = ExtResource("2_p48t8")
+edge_material = ExtResource("3_wyfv7")
+
+[node name="Body" type="MeshInstance3D" parent="." unique_id=1630931284]
+
+[node name="EdgeComponent" type="Node3D" parent="." unique_id=399110012]
+script = ExtResource("4_7grcv")
+metadata/_custom_type_script = "uid://b0dxp62v04msx"

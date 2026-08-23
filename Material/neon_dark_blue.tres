@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://dfogawys884er"]
+
+[resource]
+metallic = 0.85
+roughness = 0.15
+emission_enabled = true
+emission = Color(0.24780053, 0.42358288, 0.6262097, 1)
