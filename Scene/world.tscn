@@ -28,14 +28,14 @@ script = ExtResource("1_ejll3")
 
 [node name="Floor" parent="." unique_id=583659280 instance=ExtResource("2_dlwip")]
 
-[node name="BuildController" type="Node3D" parent="." unique_id=1417499137 node_paths=PackedStringArray("camera", "confirm_panel", "confirm_button", "cancel_button", "build_list_button")]
+[node name="BuildController" type="Node3D" parent="." unique_id=1417499137 node_paths=PackedStringArray("Camera", "ConfirmPanel", "ConfirmButton", "CancelButton", "BuildListButton")]
 script = ExtResource("3_build")
-building_scene = ExtResource("1_emx41")
-camera = NodePath("../Camera3D")
-confirm_panel = NodePath("../UI/ConfirmPanel")
-confirm_button = NodePath("../UI/ConfirmPanel/HBox/ConfirmBtn")
-cancel_button = NodePath("../UI/ConfirmPanel/HBox/CancelBtn")
-build_list_button = NodePath("../UI/BuildList/VBox/BuildBtn")
+BuildingScene = ExtResource("1_emx41")
+Camera = NodePath("../Camera3D")
+ConfirmPanel = NodePath("../UI/ConfirmPanel")
+ConfirmButton = NodePath("../UI/ConfirmPanel/HBox/ConfirmBtn")
+CancelButton = NodePath("../UI/ConfirmPanel/HBox/CancelBtn")
+BuildListButton = NodePath("../UI/BuildList/VBox/BuildBtn")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=220297026]
 environment = SubResource("Environment_7f78k")
