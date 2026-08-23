@@ -45,8 +45,6 @@ public partial class Building : Node3D
 
 	private enum Mode { Preview, Constructing, Idle }
 	private Mode _mode = Mode.Idle;
-	private StandardMaterial3D _originalBodyMaterial;
-	private StandardMaterial3D _originalEdgeMaterial;
 
 	public override void _Ready()
 	{
@@ -138,8 +136,6 @@ public partial class Building : Node3D
 	public void EnterPreview()
 	{
 		_mode = Mode.Preview;
-		_originalBodyMaterial = BodyMaterial;
-		_originalEdgeMaterial = EdgeMaterial;
 		_bodyInstance.Scale = Vector3.One;
 		_bodyInstance.Position = new Vector3(_bodyInstance.Position.X, Height / 2f, _bodyInstance.Position.Z);
 		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(1.0f, Height));
