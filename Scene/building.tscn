@@ -9,21 +9,17 @@
 [ext_resource type="Material" path="res://Material/preview_valid_edge.tres" id="7_valid_edge"]
 [ext_resource type="Material" path="res://Material/preview_invalid_edge.tres" id="8_invalid_edge"]
 
-[node name="Building" type="Node3D"]
+[node name="Building" type="Node3D" unique_id=1254101347]
 script = ExtResource("1_8saja")
-width = 3.2
-depth = 3.2
-height = 12.0
-footprint_size = Vector2(4, 4)
 body_material = ExtResource("2_p48t8")
 edge_material = ExtResource("3_wyfv7")
-preview_valid_body = ExtResource("5_valid_body")
-preview_invalid_body = ExtResource("6_invalid_body")
-preview_valid_edge = ExtResource("7_valid_edge")
-preview_invalid_edge = ExtResource("8_invalid_edge")
+preview_valid_body_material = ExtResource("5_valid_body")
+preview_invalid_body_material = ExtResource("6_invalid_body")
+preview_valid_edge_material = ExtResource("7_valid_edge")
+preview_invalid_edge_material = ExtResource("8_invalid_edge")
 
-[node name="Body" type="MeshInstance3D" parent="."]
+[node name="Body" type="MeshInstance3D" parent="." unique_id=407493475]
 
-[node name="EdgeComponent" type="Node3D" parent="."]
+[node name="EdgeComponent" type="Node3D" parent="." unique_id=1861801477]
 script = ExtResource("4_7grcv")
 metadata/_custom_type_script = "uid://b0dxp62v04msx"

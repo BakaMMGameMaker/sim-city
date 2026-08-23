@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bbhwvfsgkkb1h" path="res://Script/camera_controller.gd" id="1_ejll3"]
 [ext_resource type="PackedScene" uid="uid://docox6jjqodt5" path="res://Scene/building.tscn" id="1_emx41"]
 [ext_resource type="PackedScene" uid="uid://2kkfqhq8mcy4" path="res://Scene/floor.tscn" id="2_dlwip"]
-[ext_resource type="Script" path="res://Script/BuildController.gd" id="3_build"]
+[ext_resource type="Script" uid="uid://cehegl0ju4byt" path="res://Script/BuildController.gd" id="3_build"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ahgxp"]
 sky_top_color = Color(0.09985284, 0.15170373, 0.2716998, 1)
@@ -20,29 +20,29 @@ sky_material = SubResource("ProceduralSkyMaterial_ahgxp")
 background_mode = 2
 sky = SubResource("Sky_igapa")
 
-[node name="World" type="Node3D"]
+[node name="World" type="Node3D" unique_id=398818772]
 
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=974717144]
 transform = Transform3D(0.70710677, -0.35355338, 0.6123724, 0, 0.8660254, 0.5, -0.70710677, -0.35355338, 0.6123724, 12, 19, 12)
 script = ExtResource("1_ejll3")
 
-[node name="Floor" parent="." instance=ExtResource("2_dlwip")]
+[node name="Floor" parent="." unique_id=583659280 instance=ExtResource("2_dlwip")]
 
-[node name="BuildController" type="Node3D" parent="."]
+[node name="BuildController" type="Node3D" parent="." unique_id=1417499137 node_paths=PackedStringArray("camera", "confirm_panel", "confirm_button", "cancel_button", "build_list_button")]
 script = ExtResource("3_build")
 building_scene = ExtResource("1_emx41")
 camera = NodePath("../Camera3D")
 confirm_panel = NodePath("../UI/ConfirmPanel")
 confirm_button = NodePath("../UI/ConfirmPanel/HBox/ConfirmBtn")
 cancel_button = NodePath("../UI/ConfirmPanel/HBox/CancelBtn")
-build_list_button = NodePath("../UI/BuildList/BuildBtn")
+build_list_button = NodePath("../UI/BuildList/VBox/BuildBtn")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=220297026]
 environment = SubResource("Environment_7f78k")
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=1675381719]
 
-[node name="BuildList" type="PanelContainer" parent="UI"]
+[node name="BuildList" type="PanelContainer" parent="UI" unique_id=1673844512]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
@@ -52,35 +52,36 @@ offset_right = 160.0
 offset_bottom = -20.0
 grow_vertical = 0
 
-[node name="VBox" type="VBoxContainer" parent="UI/BuildList"]
+[node name="VBox" type="VBoxContainer" parent="UI/BuildList" unique_id=1518031800]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="UI/BuildList/VBox"]
+[node name="Label" type="Label" parent="UI/BuildList/VBox" unique_id=2023065068]
 layout_mode = 2
 text = "建筑物列表"
 horizontal_alignment = 1
 
-[node name="BuildBtn" type="Button" parent="UI/BuildList/VBox"]
+[node name="BuildBtn" type="Button" parent="UI/BuildList/VBox" unique_id=1371372144]
 custom_minimum_size = Vector2(120, 60)
 layout_mode = 2
-text = "普通建筑\n(拖拽放置)"
+text = "普通建筑
+(拖拽放置)"
 
-[node name="ConfirmPanel" type="PanelContainer" parent="UI"]
+[node name="ConfirmPanel" type="PanelContainer" parent="UI" unique_id=2084174870]
 visible = false
 offset_right = 140.0
 offset_bottom = 60.0
 
-[node name="HBox" type="HBoxContainer" parent="UI/ConfirmPanel"]
+[node name="HBox" type="HBoxContainer" parent="UI/ConfirmPanel" unique_id=486695159]
 layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="CancelBtn" type="Button" parent="UI/ConfirmPanel/HBox"]
+[node name="CancelBtn" type="Button" parent="UI/ConfirmPanel/HBox" unique_id=709275172]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 text = "✕"
 
-[node name="ConfirmBtn" type="Button" parent="UI/ConfirmPanel/HBox"]
+[node name="ConfirmBtn" type="Button" parent="UI/ConfirmPanel/HBox" unique_id=799591283]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 text = "✓"
