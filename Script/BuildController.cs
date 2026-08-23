@@ -25,7 +25,6 @@ public partial class BuildController : Node3D
 	[Export]
 	public Button BuildListButton;
 
-	/// <summary>已占用的栅格单元格 (x, z)</summary>
 	private readonly HashSet<Vector2I> _occupiedCells = new();
 
 	private enum Mode { Idle, Dragging, Confirming }
@@ -33,7 +32,6 @@ public partial class BuildController : Node3D
 
 	private Building _preview;
 	private bool _previewValid;
-	private Vector3 _pendingPosition = Vector3.Zero;
 	private Vector2I? _lastOriginCell;
 
 	public override void _Ready()
@@ -139,9 +137,8 @@ public partial class BuildController : Node3D
 		_lastOriginCell = originCell;
 		_preview.Visible = true;
 		_preview.GlobalPosition = snapped;
-		_pendingPosition = snapped;
 
-		_previewValid = IsPositionValid(originCell, _preview.FootprintWidth, _preview.FootprintDepth);
+		_previewValid = IsPositionValid(originCell, _preview.FoundationWidth, _preview.FoundationHeight);
 		if (_previewValid)
 			_preview.SetValidPreview();
 		else
@@ -152,7 +149,7 @@ public partial class BuildController : Node3D
 	{
 		_mode = Mode.Confirming;
 
-		var screenPos = Camera.UnprojectPosition(_pendingPosition + new Vector3(0, _preview.Height * 0.6f, 0));
+		var screenPos = Camera.UnprojectPosition(_preview.GlobalPosition + new Vector3(0, _preview.Height * 0.6f, 0));
 		ConfirmPanel.Position = screenPos - ConfirmPanel.Size * 0.5f;
 		ConfirmPanel.Visible = true;
 	}
@@ -163,10 +160,10 @@ public partial class BuildController : Node3D
 
 		var realBuilding = BuildingScene.Instantiate<Building>();
 		AddChild(realBuilding);
-		realBuilding.GlobalPosition = _pendingPosition;
+		realBuilding.GlobalPosition = _preview.GlobalPosition;
 		realBuilding.StartConstruction();
 
-		OccupyCells(realBuilding.GetOriginCell(), realBuilding.FootprintWidth, realBuilding.FootprintDepth);
+		OccupyCells(realBuilding.GetOriginCell(), realBuilding.FoundationWidth, realBuilding.FoundationHeight);
 
 		CleanupPreview();
 		_mode = Mode.Idle;

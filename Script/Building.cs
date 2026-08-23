@@ -16,15 +16,12 @@ public partial class Building : Node3D
 	[Export]
 	public float BuildTime = 6.0f;
 
-	/// <summary>占地宽度（栅格数，必须为正整数）</summary>
 	[Export]
-	public int FootprintWidth = 4;
+	public int FoundationWidth = 4;
 
-	/// <summary>占地深度（栅格数，必须为正整数）</summary>
 	[Export]
-	public int FootprintDepth = 4;
+	public int FoundationHeight = 4;
 
-	/// <summary>单个栅格的世界尺寸，需与 BuildController.GridSize 一致</summary>
 	[Export]
 	public float CellSize = 1.0f;
 
@@ -90,8 +87,8 @@ public partial class Building : Node3D
 	/// </summary>
 	private void SetupFoundation()
 	{
-		float worldW = FootprintWidth * CellSize;
-		float worldD = FootprintDepth * CellSize;
+		float worldW = FoundationWidth * CellSize;
+		float worldD = FoundationHeight * CellSize;
 
 		_foundationInstance = new MeshInstance3D { Name = "Foundation" };
 		var box = new BoxMesh { Size = new Vector3(worldW, FoundationThickness, worldD) };
@@ -215,8 +212,8 @@ public partial class Building : Node3D
 	/// </summary>
 	public Rect2 GetFootprintRect()
 	{
-		float worldW = FootprintWidth * CellSize;
-		float worldD = FootprintDepth * CellSize;
+		float worldW = FoundationWidth * CellSize;
+		float worldD = FoundationHeight * CellSize;
 		return new Rect2(GlobalPosition.X, GlobalPosition.Z, worldW, worldD);
 	}
 
