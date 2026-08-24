@@ -1,7 +1,10 @@
 using Godot;
 
+namespace MySimCity;
+
 /// <summary>
 /// 产出建筑某一等级的配置：每隔 IntervalSeconds 产出 Amount 个指定材料。
+/// 可在编辑器中直接编辑数组，无需改代码。
 /// </summary>
 [GlobalClass]
 public partial class ProductionLevelConfig : Resource
@@ -13,9 +16,8 @@ public partial class ProductionLevelConfig : Resource
 	public float IntervalSeconds { get; set; } = 10.0f;
 
 	[Export]
-	public int Amount { get; set; } = 1;
+	public uint Amount { get; set; } = 1;
 
-	/// <summary>材料 ID，目前仅支持 "wood"</summary>
 	[Export]
-	public string MaterialId { get; set; } = "wood";
+	public uint MaterialId { get; set; } = MaterialIds.Wood;
 }
