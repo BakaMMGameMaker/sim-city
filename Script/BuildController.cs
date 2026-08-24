@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using MySimCity;
 
 [GlobalClass]
 public partial class BuildController : Node3D
@@ -11,9 +12,6 @@ public partial class BuildController : Node3D
 	public Camera3D Camera;
 
 	[Export]
-	public float GridSize = 1.0f;
-
-	[Export]
 	public Control ConfirmPanel;
 
 	[Export]
@@ -23,7 +21,13 @@ public partial class BuildController : Node3D
 	public Button CancelButton;
 
 	[Export]
-	public Button BuildListButton;
+	public Button ResidentialButton;
+
+	[Export]
+	public Button LumberMillButton;
+
+	[Export]
+	public Label WoodLabel;
 
 	private readonly HashSet<Vector2I> _occupiedCells = new();
 
@@ -33,6 +37,9 @@ public partial class BuildController : Node3D
 	private Building _preview;
 	private bool _previewValid;
 	private Vector2I? _lastOriginCell;
+	private BuildingType _selectedType = BuildingType.Residential;
+
+	private float GridSize => GameConfig.Instance != null ? GameConfig.Instance.GridSize : 1.0f;
 
 	public override void _Ready()
 	{
@@ -41,7 +48,23 @@ public partial class BuildController : Node3D
 		ConfirmPanel.Visible = false;
 		ConfirmButton.Pressed += OnConfirmPressed;
 		CancelButton.Pressed += OnCancelPressed;
-		BuildListButton.ButtonDown += OnBuildListButtonDown;
+
+		if (ResidentialButton != null)
+			ResidentialButton.Pressed += () => OnSelectBuilding(BuildingType.Residential);
+		if (LumberMillButton != null)
+			LumberMillButton.Pressed += () => OnSelectBuilding(BuildingType.LumberMill);
+
+		if (Inventory.Instance != null)
+		{
+			Inventory.Instance.MaterialsChanged += UpdateWoodLabel;
+			UpdateWoodLabel();
+		}
+	}
+
+	private void UpdateWoodLabel()
+	{
+		if (WoodLabel != null && Inventory.Instance != null)
+			WoodLabel.Text = $"原木: {Inventory.Instance.Wood}";
 	}
 
 	public override void _Input(InputEvent @event)
@@ -75,9 +98,24 @@ public partial class BuildController : Node3D
 		}
 	}
 
-	private void OnBuildListButtonDown()
+	private void OnSelectBuilding(BuildingType type)
 	{
 		if (_mode != Mode.Idle) return;
+
+		_selectedType = type;
+
+		// 先创建临时实例拿成本，判断材料是否足够
+		var temp = BuildingScene.Instantiate<Building>();
+		temp.ApplyPreset(type);
+		int cost = temp.WoodCost;
+		temp.QueueFree();
+
+		if (Inventory.Instance != null && !Inventory.Instance.CanAffordWood(cost))
+		{
+			GD.Print($"原木不足（需要 {cost}，当前 {Inventory.Instance.Wood}），无法建造");
+			return;
+		}
+
 		StartDragging();
 	}
 
@@ -86,6 +124,7 @@ public partial class BuildController : Node3D
 		_mode = Mode.Dragging;
 		_lastOriginCell = null;
 		_preview = BuildingScene.Instantiate<Building>();
+		_preview.ApplyPreset(_selectedType);
 		AddChild(_preview);
 		_preview.EnterPreview();
 		UpdatePreviewPosition();
@@ -152,7 +191,16 @@ public partial class BuildController : Node3D
 	{
 		if (_mode != Mode.Confirming || _preview == null) return;
 
+		int cost = _preview.WoodCost;
+		if (Inventory.Instance != null && !Inventory.Instance.TrySpendWood(cost))
+		{
+			GD.Print($"确认时原木不足（需要 {cost}）");
+			Cancel();
+			return;
+		}
+
 		var realBuilding = BuildingScene.Instantiate<Building>();
+		realBuilding.ApplyPreset(_selectedType);
 		AddChild(realBuilding);
 		realBuilding.GlobalPosition = _preview.GlobalPosition;
 		realBuilding.StartConstruction();

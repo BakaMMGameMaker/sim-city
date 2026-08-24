@@ -3,13 +3,11 @@ using System.Collections.Generic;
 
 /// <summary>
 /// 在地面绘制可视化栅格线，便于对齐建造。
+/// GridSize 统一从 GameConfig 读取。
 /// </summary>
 [GlobalClass]
 public partial class GridVisualizer : Node3D
 {
-	[Export]
-	public float GridSize = 1.0f;
-
 	/// <summary>从中心向两侧的栅格数量（总跨度 = Extent * 2 * GridSize）</summary>
 	[Export]
 	public int Extent = 20;
@@ -19,6 +17,8 @@ public partial class GridVisualizer : Node3D
 
 	[Export]
 	public float LineY = 0.03f;
+
+	private float GridSize => GameConfig.Instance != null ? GameConfig.Instance.GridSize : 1.0f;
 
 	public override void _Ready()
 	{
