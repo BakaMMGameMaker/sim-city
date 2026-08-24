@@ -2,10 +2,6 @@ using Godot;
 
 namespace MySimCity;
 
-/// <summary>
-/// 默认建筑配置表。后续可把这些值做成 .tres 资源在编辑器中维护，
-/// 目前集中在此处，避免散落在 Building.ApplyPreset 的 switch 里。
-/// </summary>
 public static class DefaultBuildingDefinitions
 {
 	public static BuildingDefinition Residential()
