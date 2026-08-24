@@ -2,6 +2,13 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
+namespace MySimCity;
+
+/// <summary>
+/// 建筑本体边缘高亮组件。
+/// 只关心本体的长宽高与本地坐标系，不感知地基或 BodyOffset。
+/// BodyOffset 由 Building 把整个 Body 节点平移来处理。
+/// </summary>
 [GlobalClass]
 public partial class EdgeComponent : Node3D
 {
@@ -24,9 +31,8 @@ public partial class EdgeComponent : Node3D
 	}
 
 	/// <summary>
-	/// Building 只提供长宽高、偏移与三种 updater，边的注册由 Component 内部完成。
-	/// 建筑体默认中心对称：XZ 范围 [-Width/2, Width/2] x [-Depth/2, Depth/2]。
-	/// 当 OffsetX/OffsetZ 非零时，整体平移到对应位置。
+	/// 只描述本体本身的尺寸与更新回调。
+	/// 本体本地坐标系始终以中心为原点：XZ 范围 [-Width/2, Width/2] × [-Depth/2, Depth/2]。
 	/// </summary>
 	public class EdgeSetupConfig
 	{
@@ -34,8 +40,6 @@ public partial class EdgeComponent : Node3D
 		public float Depth;
 		public float Height;
 		public float Thickness = 0.07f;
-		public float OffsetX = 0f;
-		public float OffsetZ = 0f;
 		public StandardMaterial3D Material;
 		public Action<MeshInstance3D, BuildingConstructionState> VerticalUpdater;
 		public Action<MeshInstance3D, BuildingConstructionState> TopUpdater;
@@ -110,31 +114,29 @@ public partial class EdgeComponent : Node3D
 		float halfZ = config.Depth * 0.5f;
 		float h = config.Height;
 		float t = config.Thickness;
-		float ox = config.OffsetX;
-		float oz = config.OffsetZ;
 
 		var vertical = config.VerticalUpdater ?? ((_, _) => { });
 		var top = config.TopUpdater ?? ((_, _) => { });
 		var bottom = config.BottomUpdater ?? ((_, _) => { });
 
-		// 竖直棱：体块四个角 ±half，再加整体偏移
+		// 竖直棱：体块四个角
 		foreach (float x in new[] { -halfX, halfX })
 		{
 			foreach (float z in new[] { -halfZ, halfZ })
-				RegisterEdge(new Vector3(t, h, t), new Vector3(x + ox, 0, z + oz), vertical);
+				RegisterEdge(new Vector3(t, h, t), new Vector3(x, 0, z), vertical);
 		}
 
 		// 顶边
 		foreach (float z in new[] { -halfZ, halfZ })
-			RegisterEdge(new Vector3(config.Width, t, t), new Vector3(ox, 0, z + oz), top);
+			RegisterEdge(new Vector3(config.Width, t, t), new Vector3(0, 0, z), top);
 		foreach (float x in new[] { -halfX, halfX })
-			RegisterEdge(new Vector3(t, t, config.Depth), new Vector3(x + ox, 0, oz), top);
+			RegisterEdge(new Vector3(t, t, config.Depth), new Vector3(x, 0, 0), top);
 
 		// 底边
 		foreach (float z in new[] { -halfZ, halfZ })
-			RegisterEdge(new Vector3(config.Width, t, t), new Vector3(ox, 0, z + oz), bottom);
+			RegisterEdge(new Vector3(config.Width, t, t), new Vector3(0, 0, z), bottom);
 		foreach (float x in new[] { -halfX, halfX })
-			RegisterEdge(new Vector3(t, t, config.Depth), new Vector3(x + ox, 0, oz), bottom);
+			RegisterEdge(new Vector3(t, t, config.Depth), new Vector3(x, 0, 0), bottom);
 	}
 
 	private void RegisterEdge(Vector3 edgeSize, Vector3 basePosition, Action<MeshInstance3D, BuildingConstructionState> updater)
