@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://b7l0eabdejswb"]
 
-[ext_resource type="Script" path="res://Script/CameraController.cs" id="1_ejll3"]
+[ext_resource type="Script" uid="uid://dd2t15i8w8r7x" path="res://Script/CameraController.cs" id="1_ejll3"]
 [ext_resource type="PackedScene" uid="uid://docox6jjqodt5" path="res://Scene/building.tscn" id="1_emx41"]
 [ext_resource type="PackedScene" uid="uid://2kkfqhq8mcy4" path="res://Scene/floor.tscn" id="2_dlwip"]
-[ext_resource type="Script" path="res://Script/BuildController.cs" id="3_build"]
-[ext_resource type="Script" path="res://Script/GridVisualizer.cs" id="4_grid"]
+[ext_resource type="Script" uid="uid://b8otiackweebn" path="res://Script/BuildController.cs" id="3_build"]
+[ext_resource type="Script" uid="uid://1o0ssvvfsgjl" path="res://Script/GridVisualizer.cs" id="4_grid"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ahgxp"]
 sky_top_color = Color(0.09985284, 0.15170373, 0.2716998, 1)
@@ -21,19 +21,18 @@ sky_material = SubResource("ProceduralSkyMaterial_ahgxp")
 background_mode = 2
 sky = SubResource("Sky_igapa")
 
-[node name="World" type="Node3D"]
+[node name="World" type="Node3D" unique_id=1573182498]
 
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1861119320]
 transform = Transform3D(0.70710677, -0.35355338, 0.6123724, 0, 0.8660254, 0.5, -0.70710677, -0.35355338, 0.6123724, 12, 19, 12)
 script = ExtResource("1_ejll3")
 
-[node name="Floor" parent="." instance=ExtResource("2_dlwip")]
+[node name="Floor" parent="." unique_id=961451367 instance=ExtResource("2_dlwip")]
 
-[node name="GridVisualizer" type="Node3D" parent="."]
+[node name="GridVisualizer" type="Node3D" parent="." unique_id=563093344]
 script = ExtResource("4_grid")
-Extent = 20
 
-[node name="BuildController" type="Node3D" parent="." node_paths=PackedStringArray("Camera", "ConfirmPanel", "ConfirmButton", "CancelButton", "ResidentialButton", "LumberMillButton", "WoodLabel")]
+[node name="BuildController" type="Node3D" parent="." unique_id=550515201 node_paths=PackedStringArray("Camera", "ConfirmPanel", "ConfirmButton", "CancelButton", "ResidentialButton", "LumberMillButton", "WoodLabel")]
 script = ExtResource("3_build")
 BuildingScene = ExtResource("1_emx41")
 Camera = NodePath("../Camera3D")
@@ -44,23 +43,23 @@ ResidentialButton = NodePath("../UI/BuildList/VBox/ResidentialBtn")
 LumberMillButton = NodePath("../UI/BuildList/VBox/LumberMillBtn")
 WoodLabel = NodePath("../UI/MaterialsPanel/WoodLabel")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1381073999]
 environment = SubResource("Environment_7f78k")
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=849869404]
 
-[node name="MaterialsPanel" type="PanelContainer" parent="UI"]
+[node name="MaterialsPanel" type="PanelContainer" parent="UI" unique_id=1374062608]
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 160.0
 offset_bottom = 60.0
 
-[node name="WoodLabel" type="Label" parent="UI/MaterialsPanel"]
+[node name="WoodLabel" type="Label" parent="UI/MaterialsPanel" unique_id=1235032905]
 layout_mode = 2
 text = "原木: 25"
 horizontal_alignment = 1
 
-[node name="BuildList" type="PanelContainer" parent="UI"]
+[node name="BuildList" type="PanelContainer" parent="UI" unique_id=1330407765]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
@@ -70,40 +69,40 @@ offset_right = 180.0
 offset_bottom = -20.0
 grow_vertical = 0
 
-[node name="VBox" type="VBoxContainer" parent="UI/BuildList"]
+[node name="VBox" type="VBoxContainer" parent="UI/BuildList" unique_id=505452260]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="UI/BuildList/VBox"]
+[node name="Label" type="Label" parent="UI/BuildList/VBox" unique_id=882547986]
 layout_mode = 2
 text = "建筑物列表"
 horizontal_alignment = 1
 
-[node name="ResidentialBtn" type="Button" parent="UI/BuildList/VBox"]
+[node name="ResidentialBtn" type="Button" parent="UI/BuildList/VBox" unique_id=2041983620]
 custom_minimum_size = Vector2(140, 50)
 layout_mode = 2
 text = "住宅 (12 原木)"
 
-[node name="LumberMillBtn" type="Button" parent="UI/BuildList/VBox"]
+[node name="LumberMillBtn" type="Button" parent="UI/BuildList/VBox" unique_id=1456141472]
 custom_minimum_size = Vector2(140, 50)
 layout_mode = 2
 text = "伐木场 (5 原木)"
 
-[node name="ConfirmPanel" type="PanelContainer" parent="UI"]
+[node name="ConfirmPanel" type="PanelContainer" parent="UI" unique_id=1502436122]
 visible = false
 offset_right = 140.0
 offset_bottom = 60.0
 
-[node name="HBox" type="HBoxContainer" parent="UI/ConfirmPanel"]
+[node name="HBox" type="HBoxContainer" parent="UI/ConfirmPanel" unique_id=1035992153]
 layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="CancelBtn" type="Button" parent="UI/ConfirmPanel/HBox"]
+[node name="CancelBtn" type="Button" parent="UI/ConfirmPanel/HBox" unique_id=2138585645]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 text = "✕"
 
-[node name="ConfirmBtn" type="Button" parent="UI/ConfirmPanel/HBox"]
+[node name="ConfirmBtn" type="Button" parent="UI/ConfirmPanel/HBox" unique_id=1914634656]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 text = "✓"
