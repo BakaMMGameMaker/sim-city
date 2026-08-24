@@ -21,73 +21,89 @@ sky_material = SubResource("ProceduralSkyMaterial_ahgxp")
 background_mode = 2
 sky = SubResource("Sky_igapa")
 
-[node name="World" type="Node3D" unique_id=398818772]
+[node name="World" type="Node3D"]
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=974717144]
+[node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(0.70710677, -0.35355338, 0.6123724, 0, 0.8660254, 0.5, -0.70710677, -0.35355338, 0.6123724, 12, 19, 12)
 script = ExtResource("1_ejll3")
 
-[node name="Floor" parent="." unique_id=583659280 instance=ExtResource("2_dlwip")]
+[node name="Floor" parent="." instance=ExtResource("2_dlwip")]
 
-[node name="GridVisualizer" type="Node3D" parent="." unique_id=900100001]
+[node name="GridVisualizer" type="Node3D" parent="."]
 script = ExtResource("4_grid")
-GridSize = 1.0
 Extent = 20
 
-[node name="BuildController" type="Node3D" parent="." unique_id=1417499137 node_paths=PackedStringArray("Camera", "ConfirmPanel", "ConfirmButton", "CancelButton", "BuildListButton")]
+[node name="BuildController" type="Node3D" parent="." node_paths=PackedStringArray("Camera", "ConfirmPanel", "ConfirmButton", "CancelButton", "ResidentialButton", "LumberMillButton", "WoodLabel")]
 script = ExtResource("3_build")
 BuildingScene = ExtResource("1_emx41")
 Camera = NodePath("../Camera3D")
 ConfirmPanel = NodePath("../UI/ConfirmPanel")
 ConfirmButton = NodePath("../UI/ConfirmPanel/HBox/ConfirmBtn")
 CancelButton = NodePath("../UI/ConfirmPanel/HBox/CancelBtn")
-BuildListButton = NodePath("../UI/BuildList/VBox/BuildBtn")
+ResidentialButton = NodePath("../UI/BuildList/VBox/ResidentialBtn")
+LumberMillButton = NodePath("../UI/BuildList/VBox/LumberMillBtn")
+WoodLabel = NodePath("../UI/MaterialsPanel/WoodLabel")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=220297026]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_7f78k")
 
-[node name="UI" type="CanvasLayer" parent="." unique_id=1675381719]
+[node name="UI" type="CanvasLayer" parent="."]
 
-[node name="BuildList" type="PanelContainer" parent="UI" unique_id=1673844512]
+[node name="MaterialsPanel" type="PanelContainer" parent="UI"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 160.0
+offset_bottom = 60.0
+
+[node name="WoodLabel" type="Label" parent="UI/MaterialsPanel"]
+layout_mode = 2
+text = "原木: 25"
+horizontal_alignment = 1
+
+[node name="BuildList" type="PanelContainer" parent="UI"]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 20.0
-offset_top = -120.0
-offset_right = 160.0
+offset_top = -180.0
+offset_right = 180.0
 offset_bottom = -20.0
 grow_vertical = 0
 
-[node name="VBox" type="VBoxContainer" parent="UI/BuildList" unique_id=1518031800]
+[node name="VBox" type="VBoxContainer" parent="UI/BuildList"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="UI/BuildList/VBox" unique_id=2023065068]
+[node name="Label" type="Label" parent="UI/BuildList/VBox"]
 layout_mode = 2
 text = "建筑物列表"
 horizontal_alignment = 1
 
-[node name="BuildBtn" type="Button" parent="UI/BuildList/VBox" unique_id=1371372144]
-custom_minimum_size = Vector2(120, 60)
+[node name="ResidentialBtn" type="Button" parent="UI/BuildList/VBox"]
+custom_minimum_size = Vector2(140, 50)
 layout_mode = 2
-text = "普通建筑
-(拖拽放置)"
+text = "住宅 (12 原木)"
 
-[node name="ConfirmPanel" type="PanelContainer" parent="UI" unique_id=2084174870]
+[node name="LumberMillBtn" type="Button" parent="UI/BuildList/VBox"]
+custom_minimum_size = Vector2(140, 50)
+layout_mode = 2
+text = "伐木场 (5 原木)"
+
+[node name="ConfirmPanel" type="PanelContainer" parent="UI"]
 visible = false
 offset_right = 140.0
 offset_bottom = 60.0
 
-[node name="HBox" type="HBoxContainer" parent="UI/ConfirmPanel" unique_id=486695159]
+[node name="HBox" type="HBoxContainer" parent="UI/ConfirmPanel"]
 layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="CancelBtn" type="Button" parent="UI/ConfirmPanel/HBox" unique_id=709275172]
+[node name="CancelBtn" type="Button" parent="UI/ConfirmPanel/HBox"]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 text = "✕"
 
-[node name="ConfirmBtn" type="Button" parent="UI/ConfirmPanel/HBox" unique_id=799591283]
+[node name="ConfirmBtn" type="Button" parent="UI/ConfirmPanel/HBox"]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 text = "✓"

@@ -15,6 +15,11 @@ run/main_scene="uid://b7l0eabdejswb"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+GameConfig="*res://Script/GameConfig.cs"
+Inventory="*res://Script/Inventory.cs"
+
 [display]
 
 window/stretch/mode="canvas_items"
