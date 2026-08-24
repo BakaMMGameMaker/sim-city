@@ -8,7 +8,6 @@ public partial class Inventory : Node
 {
 	public static Inventory Instance { get; private set; }
 
-	/// <summary>当前原木数量</summary>
 	[Export]
 	public int Wood { get; private set; } = 25;
 

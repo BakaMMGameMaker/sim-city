@@ -6,9 +6,7 @@ public partial class Building : Node3D
 {
 	public enum BodyAlignMode
 	{
-		/// <summary>建筑体中心与地基中心对齐</summary>
 		Center,
-		/// <summary>建筑体角落相对地基角落偏移（OffsetX / OffsetZ）</summary>
 		Offset
 	}
 
@@ -33,15 +31,12 @@ public partial class Building : Node3D
 	[Export]
 	public float FoundationThickness = 0.06f;
 
-	/// <summary>建筑体与地基的对齐方式</summary>
 	[Export]
 	public BodyAlignMode BodyAlign = BodyAlignMode.Center;
 
-	/// <summary>仅 Offset 模式生效：建筑体 min-corner 相对地基 min-corner 的 X 偏移</summary>
 	[Export]
 	public float BodyOffsetX = 0f;
 
-	/// <summary>仅 Offset 模式生效：建筑体 min-corner 相对地基 min-corner 的 Z 偏移</summary>
 	[Export]
 	public float BodyOffsetZ = 0f;
 
@@ -75,7 +70,6 @@ public partial class Building : Node3D
 	[Export]
 	public StandardMaterial3D PreviewInvalidFoundationMaterial;
 
-	// ---- 建造成本 & 产出 ----
 	[Export]
 	public int WoodCost = 0;
 
@@ -85,7 +79,6 @@ public partial class Building : Node3D
 	[Export]
 	public int Level = 1;
 
-	/// <summary>产出等级配置表（仅 IsProducer 时使用）</summary>
 	[Export]
 	public ProductionLevelConfig[] ProductionTable;
 
@@ -93,7 +86,6 @@ public partial class Building : Node3D
 	private MeshInstance3D _foundationInstance;
 	private EdgeComponent _edgeComponent;
 
-	/// <summary>建筑体相对 Building 原点的 XZ 偏移（已根据 AlignMode 计算）</summary>
 	private Vector3 _bodyBaseOffset = Vector3.Zero;
 
 	private enum Mode { Preview, Constructing, Idle }
@@ -106,12 +98,6 @@ public partial class Building : Node3D
 		AssertExports.AssertExportsNode(this);
 
 		_foundationInstance = GetNodeOrNull<MeshInstance3D>("Foundation");
-		if (_foundationInstance == null)
-		{
-			_foundationInstance = new MeshInstance3D { Name = "Foundation" };
-			AddChild(_foundationInstance);
-		}
-
 		_bodyInstance = GetNode<MeshInstance3D>("Body");
 		_edgeComponent = GetNode<EdgeComponent>("EdgeComponent");
 
@@ -136,7 +122,6 @@ public partial class Building : Node3D
 			return;
 		}
 
-		// Offset 模式：建筑体 min-corner = 地基 min-corner + (BodyOffsetX, BodyOffsetZ)
 		float fw = FoundationWidth * GridSize;
 		float fd = FoundationDepth * GridSize;
 		float bodyCenterX = -fw * 0.5f + BodyOffsetX + Width * 0.5f;
@@ -323,16 +308,11 @@ public partial class Building : Node3D
 		);
 	}
 
-	/// <summary>
-	/// 根据类型应用预设数值（住宅 / 伐木场）。
-	/// 可在外部再覆盖个别字段。
-	/// </summary>
 	public void ApplyPreset(MySimCity.BuildingType type)
 	{
 		switch (type)
 		{
 			case MySimCity.BuildingType.Residential:
-				// 普通住宅：中等体积，需要原木，无产出
 				Width = 2.8f;
 				Depth = 2.8f;
 				Height = 5.5f;
@@ -349,7 +329,6 @@ public partial class Building : Node3D
 				break;
 
 			case MySimCity.BuildingType.LumberMill:
-				// 伐木场：稍大，低成本起步，产出原木
 				Width = 3.6f;
 				Depth = 3.2f;
 				Height = 4.2f;
@@ -357,22 +336,20 @@ public partial class Building : Node3D
 				FoundationWidth = 4;
 				FoundationDepth = 4;
 				BodyAlign = BodyAlignMode.Offset;
-				// 让建筑体稍微偏向地基一角，便于视觉区分
 				BodyOffsetX = 0.2f;
 				BodyOffsetZ = 0.15f;
 				WoodCost = 5;
 				IsProducer = true;
 				Level = 1;
-				ProductionTable = new[]
-				{
-					new ProductionLevelConfig { Level = 1, IntervalSeconds = 12.0f, Amount = 2, MaterialId = "wood" },
+				ProductionTable =
+                [
+                    new ProductionLevelConfig { Level = 1, IntervalSeconds = 12.0f, Amount = 2, MaterialId = "wood" },
 					new ProductionLevelConfig { Level = 2, IntervalSeconds = 10.0f, Amount = 3, MaterialId = "wood" },
 					new ProductionLevelConfig { Level = 3, IntervalSeconds = 8.0f, Amount = 5, MaterialId = "wood" },
-				};
+				];
 				break;
 		}
 
-		// 重新应用几何（_Ready 已跑过后调用时需要）
 		if (IsInsideTree())
 		{
 			SetupBuilding();

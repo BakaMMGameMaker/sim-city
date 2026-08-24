@@ -2,6 +2,8 @@ namespace MySimCity;
 
 public enum BuildingType
 {
-	Residential,
+	// 住宅
+	Residential, 
+	// 伐木场
 	LumberMill
 }
