@@ -38,12 +38,19 @@ public partial class BuildController : Node3D
 	private bool _previewValid;
 	private Vector2I? _lastOriginCell;
 	private BuildingType _selectedType = BuildingType.Residential;
+	private BuildingDefinition _selectedDef;
+
+	private IInventory _inventory;
 
 	private float GridSize => GameConfig.Instance != null ? GameConfig.Instance.GridSize : 1.0f;
 
 	public override void _Ready()
 	{
 		AssertExports.AssertExportsNode(this);
+
+		// 强制从 Autoload 获取接口实例
+		_inventory = Inventory.Instance as IInventory
+			?? throw new System.InvalidOperationException("Inventory Autoload 未实现 IInventory");
 
 		ConfirmPanel.Visible = false;
 		ConfirmButton.Pressed += OnConfirmPressed;
@@ -103,16 +110,11 @@ public partial class BuildController : Node3D
 		if (_mode != Mode.Idle) return;
 
 		_selectedType = type;
+		_selectedDef = DefaultBuildingDefinitions.Get(type);
 
-		// 先创建临时实例拿成本，判断材料是否足够
-		var temp = BuildingScene.Instantiate<Building>();
-		temp.ApplyPreset(type);
-		int cost = temp.WoodCost;
-		temp.QueueFree();
-
-		if (Inventory.Instance != null && !Inventory.Instance.CanAffordWood(cost))
+		if (!_inventory.CanAfford(_selectedDef.Costs))
 		{
-			GD.Print($"原木不足（需要 {cost}，当前 {Inventory.Instance.Wood}），无法建造");
+			GD.Print($"材料不足，无法建造 {type}");
 			return;
 		}
 
@@ -124,7 +126,8 @@ public partial class BuildController : Node3D
 		_mode = Mode.Dragging;
 		_lastOriginCell = null;
 		_preview = BuildingScene.Instantiate<Building>();
-		_preview.ApplyPreset(_selectedType);
+		_preview.Initialize(_inventory);
+		_preview.ApplyDefinition(_selectedDef);
 		AddChild(_preview);
 		_preview.EnterPreview();
 		UpdatePreviewPosition();
@@ -169,7 +172,7 @@ public partial class BuildController : Node3D
 		_preview.Visible = true;
 		_preview.GlobalPosition = snapped;
 
-		_previewValid = IsPositionValid(originCell, _preview.FoundationWidth, _preview.FoundationDepth);
+		_previewValid = IsPositionValid(originCell, _preview.FoundationSize.X, _preview.FoundationSize.Y);
 		_preview.SetPreviewValid(_previewValid);
 	}
 
@@ -191,21 +194,21 @@ public partial class BuildController : Node3D
 	{
 		if (_mode != Mode.Confirming || _preview == null) return;
 
-		int cost = _preview.WoodCost;
-		if (Inventory.Instance != null && !Inventory.Instance.TrySpendWood(cost))
+		if (!_inventory.TrySpend(_selectedDef.Costs))
 		{
-			GD.Print($"确认时原木不足（需要 {cost}）");
+			GD.Print("确认时材料不足");
 			Cancel();
 			return;
 		}
 
 		var realBuilding = BuildingScene.Instantiate<Building>();
-		realBuilding.ApplyPreset(_selectedType);
+		realBuilding.Initialize(_inventory);
+		realBuilding.ApplyDefinition(_selectedDef);
 		AddChild(realBuilding);
 		realBuilding.GlobalPosition = _preview.GlobalPosition;
 		realBuilding.StartConstruction();
 
-		OccupyCells(realBuilding.GetOriginCell(), realBuilding.FoundationWidth, realBuilding.FoundationDepth);
+		OccupyCells(realBuilding.GetOriginCell(), realBuilding.FoundationSize.X, realBuilding.FoundationSize.Y);
 
 		CleanupPreview();
 		_mode = Mode.Idle;
