@@ -3,12 +3,6 @@ using System;
 
 namespace MySimCity;
 
-/// <summary>
-/// 建筑实体。
-/// - Foundation 只负责地基尺寸与网格占用
-/// - Body 节点承载本体 Mesh + EdgeComponent，BodyOffset 只影响 Body 节点位置
-/// - Production 通过挂载的 ProductionComponent 实现，Building 自身不硬编码产出逻辑
-/// </summary>
 [GlobalClass]
 public partial class Building : Node3D
 {
@@ -30,7 +24,6 @@ public partial class Building : Node3D
 	[Export]
 	public float BuildTime = 6.0f;
 
-	/// <summary>地基占用格子（X = 宽，Y = 深）</summary>
 	[Export]
 	public Vector2I FoundationSize = new(4, 4);
 
@@ -76,9 +69,8 @@ public partial class Building : Node3D
 	[Export]
 	public StandardMaterial3D PreviewInvalidFoundationMaterial;
 
-	/// <summary>建造成本（可配置多材料）</summary>
 	[Export]
-	public MaterialAmount[] Costs = Array.Empty<MaterialAmount>();
+	public MaterialAmount[] Costs = [];
 
 	private MeshInstance3D _foundationInstance;
 	private Node3D _bodyRoot;
@@ -91,28 +83,23 @@ public partial class Building : Node3D
 	private enum Mode { Preview, Constructing, Idle }
 	private Mode _mode = Mode.Idle;
 
-	private IInventory _inventory;
-
 	public override void _Ready()
 	{
 		AssertExports.AssertExportsNode(this);
 
-		_foundationInstance = GetNodeOrNull<MeshInstance3D>("Foundation");
-		_bodyRoot = GetNodeOrNull<Node3D>("Body");
-		_bodyMesh = GetNodeOrNull<MeshInstance3D>("Body/Mesh") ?? GetNodeOrNull<MeshInstance3D>("Body");
-		_edgeComponent = GetNodeOrNull<EdgeComponent>("Body/EdgeComponent") ?? GetNodeOrNull<EdgeComponent>("EdgeComponent");
-		_productionComponent = GetNodeOrNull<ProductionComponent>("ProductionComponent");
+		_foundationInstance = GetNode<MeshInstance3D>("Foundation");
+		_bodyRoot = GetNode<Node3D>("Body");
+		_bodyMesh = GetNode<MeshInstance3D>("Body/Mesh");
+		_edgeComponent = GetNode<EdgeComponent>("Body/EdgeComponent");
+		_productionComponent = GetNode<ProductionComponent>("ProductionComponent");
 
 		SetupBuilding();
 	}
 
-	/// <summary>
-	/// 依赖注入入口。必须在产出相关逻辑前调用。
-	/// </summary>
 	public void Initialize(IInventory inventory)
 	{
-		_inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
-		_productionComponent?.Initialize(_inventory);
+        ArgumentNullException.ThrowIfNull(inventory);
+        _productionComponent?.Initialize(inventory);
 	}
 
 	private float GridSize => GameConfig.Instance != null ? GameConfig.Instance.GridSize : 1.0f;
@@ -142,8 +129,6 @@ public partial class Building : Node3D
 
 	private void SetupFoundation()
 	{
-		if (_foundationInstance == null) return;
-
 		float worldW = FoundationSize.X * GridSize;
 		float worldD = FoundationSize.Y * GridSize;
 
@@ -155,28 +140,21 @@ public partial class Building : Node3D
 
 	private void SetupBody()
 	{
-		if (_bodyRoot != null)
-			_bodyRoot.Position = _bodyBaseOffset;
-
-		if (_bodyMesh == null) return;
+		_bodyRoot.Position = _bodyBaseOffset;
 
 		var box = new BoxMesh { Size = new Vector3(Width, Height, Depth) };
 		_bodyMesh.Mesh = box;
 		_bodyMesh.MaterialOverride = BodyMaterial;
-		// Mesh 在 Body 本地坐标系中心
 		_bodyMesh.Position = new Vector3(0, Height * 0.5f, 0);
 	}
 
 	private void SetupEdgeComponent()
 	{
-		if (_edgeComponent == null) return;
-
-		// EdgeComponent 只拿到本体信息，不再接收 Offset
 		_edgeComponent.Setup(new EdgeComponent.EdgeSetupConfig
 		{
-			Width = Width,
-			Depth = Depth,
-			Height = Height,
+			OwnerWidth = Width,
+			OwnerDepth = Depth,
+			OwnerHeight = Height,
 			Thickness = EdgeThickness,
 			Material = EdgeMaterial,
 			VerticalUpdater = (node, state) =>
@@ -195,12 +173,9 @@ public partial class Building : Node3D
 	public void EnterPreview()
 	{
 		_mode = Mode.Preview;
-		if (_bodyMesh != null)
-		{
-			_bodyMesh.Scale = Vector3.One;
-			_bodyMesh.Position = new Vector3(0, Height * 0.5f, 0);
-		}
-		_edgeComponent?.Update(new EdgeComponent.BuildingConstructionState(1.0f, Height));
+		_bodyMesh.Scale = Vector3.One;
+		_bodyMesh.Position = new Vector3(0, Height * 0.5f, 0);
+		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(1.0f, Height));
 	}
 
 	public void SetPreviewValid(bool valid)
@@ -211,31 +186,25 @@ public partial class Building : Node3D
 		var bodyMat = valid ? PreviewValidBodyMaterial : PreviewInvalidBodyMaterial;
 		var edgeMat = valid ? PreviewValidEdgeMaterial : PreviewInvalidEdgeMaterial;
 
-		if (_foundationInstance != null)
-			_foundationInstance.MaterialOverride = foundationMat;
-		if (_bodyMesh != null)
-			_bodyMesh.MaterialOverride = bodyMat;
-		_edgeComponent?.SetMaterial(edgeMat);
+		_foundationInstance.MaterialOverride = foundationMat;
+		_bodyMesh.MaterialOverride = bodyMat;
+		_edgeComponent.SetMaterial(edgeMat);
 	}
 
 	public void ExitPreview()
 	{
-		if (_foundationInstance != null)
-			_foundationInstance.MaterialOverride = FoundationMaterial;
-		if (_bodyMesh != null)
-			_bodyMesh.MaterialOverride = BodyMaterial;
-		_edgeComponent?.SetMaterial(EdgeMaterial);
+		_foundationInstance.MaterialOverride = FoundationMaterial;
+		_bodyMesh.MaterialOverride = BodyMaterial;
+		_edgeComponent.SetMaterial(EdgeMaterial);
 	}
 
 	public void StartConstruction()
 	{
 		_mode = Mode.Constructing;
 
-		if (_foundationInstance != null)
-			_foundationInstance.MaterialOverride = FoundationMaterial;
-		if (_bodyMesh != null)
-			_bodyMesh.MaterialOverride = BodyMaterial;
-		_edgeComponent?.SetMaterial(EdgeMaterial);
+		_foundationInstance.MaterialOverride = FoundationMaterial;
+		_bodyMesh.MaterialOverride = BodyMaterial;
+		_edgeComponent.SetMaterial(EdgeMaterial);
 
 		InitConstruction();
 		StartConstructionTween();
@@ -243,12 +212,9 @@ public partial class Building : Node3D
 
 	private void InitConstruction()
 	{
-		if (_bodyMesh != null)
-		{
-			_bodyMesh.Scale = new Vector3(1, 0, 1);
-			_bodyMesh.Position = new Vector3(0, 0, 0);
-		}
-		_edgeComponent?.Update(new EdgeComponent.BuildingConstructionState(0.0f, 0.0f));
+		_bodyMesh.Scale = new Vector3(1, 0, 1);
+		_bodyMesh.Position = new Vector3(0, 0, 0);
+		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(0.0f, 0.0f));
 	}
 
 	private void StartConstructionTween()
@@ -265,19 +231,16 @@ public partial class Building : Node3D
 		float scaleY = progress;
 		float top = progress * Height;
 
-		if (_bodyMesh != null)
-		{
-			_bodyMesh.Scale = new Vector3(1, scaleY, 1);
-			_bodyMesh.Position = new Vector3(0, top / 2f, 0);
-		}
+		_bodyMesh.Scale = new Vector3(1, scaleY, 1);
+		_bodyMesh.Position = new Vector3(0, top / 2f, 0);
 
-		_edgeComponent?.Update(new EdgeComponent.BuildingConstructionState(scaleY, top));
+		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(scaleY, top));
 	}
 
 	private void OnConstructionFinished()
 	{
 		_mode = Mode.Idle;
-		_productionComponent?.StartProduction();
+		_productionComponent.StartProduction();
 	}
 
 	public Rect2 GetFootprintRect()
@@ -297,15 +260,11 @@ public partial class Building : Node3D
 		);
 	}
 
-	/// <summary>
-	/// 用外部可配置的 BuildingDefinition 覆盖当前参数。
-	/// 生产表会同步到挂载的 ProductionComponent。
-	/// </summary>
 	public void ApplyDefinition(BuildingDefinition def)
 	{
-		if (def == null) throw new ArgumentNullException(nameof(def));
+        ArgumentNullException.ThrowIfNull(def);
 
-		Width = def.Width;
+        Width = def.Width;
 		Depth = def.Depth;
 		Height = def.Height;
 		BuildTime = def.BuildTime;
@@ -313,12 +272,9 @@ public partial class Building : Node3D
 		BodyAlign = def.BodyAlign;
 		BodyOffsetX = def.BodyOffsetX;
 		BodyOffsetZ = def.BodyOffsetZ;
-		Costs = def.Costs ?? Array.Empty<MaterialAmount>();
+		Costs = def.Costs ?? [];
 
-		if (_productionComponent != null)
-		{
-			_productionComponent.Configure(def.ProductionTable, level: 1);
-		}
+		_productionComponent.Configure(def.ProductionTable, level: 1);
 
 		if (IsInsideTree())
 		{

@@ -20,7 +20,6 @@ public partial class ProductionComponent : Node
 	private Timer _timer;
 	private bool _running;
 
-	/// <summary>强制注入库存。未调用前 StartProduction 会直接返回。</summary>
 	public void Initialize(IInventory inventory)
 	{
 		_inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));

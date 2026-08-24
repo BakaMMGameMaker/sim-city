@@ -4,9 +4,6 @@ using System.Linq;
 
 namespace MySimCity;
 
-/// <summary>
-/// 全局材料库存（Autoload）。实现 IInventory，供依赖注入使用。
-/// </summary>
 [GlobalClass]
 public partial class Inventory : Node, IInventory
 {

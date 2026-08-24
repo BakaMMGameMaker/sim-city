@@ -1,19 +1,14 @@
 using Godot;
 using System.Collections.Generic;
 
-/// <summary>
-/// 在地面绘制可视化栅格线，便于对齐建造。
-/// GridSize 统一从 GameConfig 读取。
-/// </summary>
 [GlobalClass]
 public partial class GridVisualizer : Node3D
 {
-	/// <summary>从中心向两侧的栅格数量（总跨度 = Extent * 2 * GridSize）</summary>
 	[Export]
 	public int Extent = 20;
 
 	[Export]
-	public Color LineColor = new Color(0.35f, 0.55f, 0.75f, 0.35f);
+	public Color LineColor = new(0.35f, 0.55f, 0.75f, 0.35f);
 
 	[Export]
 	public float LineY = 0.03f;
