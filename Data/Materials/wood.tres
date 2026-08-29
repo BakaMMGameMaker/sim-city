@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="MaterialDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Script/Definition/MaterialDefinition.cs" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+Id = 1
+DisplayName = "原木"

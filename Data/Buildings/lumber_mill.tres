@@ -1,8 +1,8 @@
 [gd_resource type="Resource" script_class="BuildingDefinition" load_steps=8 format=3]
 
-[ext_resource type="Script" path="res://Script/Data/BuildingDefinition.cs" id="1_def"]
-[ext_resource type="Script" path="res://Script/Data/MaterialAmount.cs" id="2_amt"]
-[ext_resource type="Script" path="res://Script/Data/ProductionLevelConfig.cs" id="3_prod"]
+[ext_resource type="Script" path="res://Script/Definition/BuildingDefinition.cs" id="1_def"]
+[ext_resource type="Script" path="res://Script/Definition/MaterialAmount.cs" id="2_amt"]
+[ext_resource type="Script" path="res://Script/Definition/ProducingLevelConfig.cs" id="3_prod"]
 
 [sub_resource type="Resource" id="MaterialAmount_wood5"]
 script = ExtResource("2_amt")

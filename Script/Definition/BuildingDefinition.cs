@@ -54,7 +54,7 @@ public partial class BuildingDefinition : Resource
 	public MaterialAmount[] Costs { get; set; } = [];
 
 	[Export]
-	public ProductionLevelConfig[] ProductionTable { get; set; } = [];
+	public ProducingLevelConfig[] ProductionTable { get; set; } = [];
 
 	private static readonly Regex IdPattern = new(@"^[a-z][a-z0-9_]*$", RegexOptions.Compiled);
 

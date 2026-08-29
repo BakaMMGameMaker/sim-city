@@ -38,6 +38,7 @@ public partial class BuildController : Node3D
 	private BuildingDefinition _selectedDef;
 
 	private IInventory _inventory;
+	private BuildingFactory _buildingFactory;
 
 	private float GridSize => GameConfig.Instance != null ? GameConfig.Instance.GridSize : 1.0f;
 
@@ -48,6 +49,7 @@ public partial class BuildController : Node3D
 		// 强制从 Autoload 获取接口实例
 		_inventory = Inventory.Instance as IInventory
 			?? throw new System.InvalidOperationException("Inventory Autoload 未实现 IInventory");
+		_buildingFactory = new BuildingFactory(_inventory);
 
 		ConfirmPanel.Visible = false;
 		ConfirmButton.Pressed += OnConfirmPressed;
@@ -65,7 +67,7 @@ public partial class BuildController : Node3D
 	private void UpdateWoodLabel()
 	{
 		if (WoodLabel != null && Inventory.Instance != null)
-			WoodLabel.Text = $"原木: {Inventory.Instance.Wood}";
+			WoodLabel.Text = $"{MaterialDatabase.GetDisplayName(MaterialType.Wood)}: {Inventory.Instance.Wood}";
 	}
 
 	public override void _Input(InputEvent @event)
@@ -155,7 +157,7 @@ public partial class BuildController : Node3D
 
 	private static string MakeButtonText(BuildingDefinition def)
 	{
-		var costs = MaterialNames.FormatCosts(def.Costs);
+		var costs = MaterialDatabase.FormatCosts(def.Costs);
 		return costs.Length > 0 ? $"{def.DisplayName} ({costs})" : def.DisplayName;
 	}
 
@@ -165,7 +167,6 @@ public partial class BuildController : Node3D
 		_lastOriginCell = null;
 		_preview = BuildingScene.Instantiate<Building>();
 		AddChild(_preview);
-		_preview.Initialize(_inventory);
 		_preview.ApplyDefinition(_selectedDef);
 		_preview.EnterPreview();
 		UpdatePreviewPosition();
@@ -239,12 +240,7 @@ public partial class BuildController : Node3D
 			return;
 		}
 
-		var realBuilding = BuildingScene.Instantiate<Building>();
-		AddChild(realBuilding);
-		realBuilding.Initialize(_inventory);
-		realBuilding.ApplyDefinition(_selectedDef);
-		realBuilding.GlobalPosition = _preview.GlobalPosition;
-		realBuilding.StartConstruction();
+		var realBuilding = _buildingFactory.CreateBuilding(BuildingScene, this, _selectedDef, _preview.GlobalPosition);
 
 		OccupyCells(realBuilding.GetOriginCell(), realBuilding.FoundationSize.X, realBuilding.FoundationSize.Y);
 

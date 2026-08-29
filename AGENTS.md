@@ -21,3 +21,8 @@
 
 ### 3.1 手写 .tscn
 - Node 类型不能当 sub_resource，只有 Resource 派生类型能进 `[sub_resource]`；sub_resource 必须先于引用它的节点声明。
+
+## 4. 开发规范
+
+- 保持良好的工程结构，需要重构时大胆重构。
+- 面向接口编程。

@@ -432,27 +432,27 @@ public partial class BuildingDefinitionsDock : Control
 	private void OnAddCostPressed()
 	{
 		if (_selected == null) return;
-		var all = MaterialNames.GetAll();
+		var all = MaterialDatabase.GetAllNames();
 		var defaultId = all.Count > 0 ? all[0].Id : MaterialType.Wood;
 		AddCostRow(defaultId, 1);
 		MarkDirty();
 	}
 
-	private void RebuildProductionRows(ProductionLevelConfig[] table)
+	private void RebuildProductionRows(ProducingLevelConfig[] table)
 	{
 		ClearChildren(_productionBox);
 		if (table == null) return;
 		foreach (var config in table)
 		{
 			AddProductionRow(
-				config?.Level ?? 1,
+				config?.Level ?? 1u,
 				config?.IntervalSeconds ?? 10.0f,
 				config?.Amount ?? 1,
-				config?.MaterialId ?? MaterialType.Wood);
+				config?.Material ?? MaterialType.Wood);
 		}
 	}
 
-	private void AddProductionRow(int level, double interval, uint amount, MaterialType materialId)
+	private void AddProductionRow(uint level, double interval, uint amount, MaterialType materialId)
 	{
 		var row = new HBoxContainer();
 
@@ -495,9 +495,9 @@ public partial class BuildingDefinitionsDock : Control
 	private void OnAddProductionPressed()
 	{
 		if (_selected == null) return;
-		var all = MaterialNames.GetAll();
+		var all = MaterialDatabase.GetAllNames();
 		var defaultId = all.Count > 0 ? all[0].Id : MaterialType.Wood;
-		AddProductionRow(1, 10.0, 1, defaultId);
+		AddProductionRow(1u, 10.0, 1u, defaultId);
 		MarkDirty();
 	}
 
@@ -516,9 +516,9 @@ public partial class BuildingDefinitionsDock : Control
 		return result.ToArray();
 	}
 
-	private ProductionLevelConfig[] CollectProduction()
+	private ProducingLevelConfig[] CollectProduction()
 	{
-		var result = new List<ProductionLevelConfig>();
+		var result = new List<ProducingLevelConfig>();
 		foreach (var child in _productionBox.GetChildren())
 		{
 			if (child is not HBoxContainer row) continue;
@@ -526,12 +526,12 @@ public partial class BuildingDefinitionsDock : Control
 			var intervalSpin = row.GetChild<SpinBox>(1);
 			var amountSpin = row.GetChild<SpinBox>(2);
 			var material = row.GetChild<OptionButton>(3);
-			result.Add(new ProductionLevelConfig
+			result.Add(new ProducingLevelConfig
 			{
-				Level = Mathf.RoundToInt(levelSpin.Value),
+				Level = (uint)Mathf.RoundToInt(levelSpin.Value),
 				IntervalSeconds = (float)intervalSpin.Value,
 				Amount = (uint)Mathf.RoundToInt(amountSpin.Value),
-				MaterialId = (MaterialType)material.GetItemId(material.Selected)
+				Material = (MaterialType)material.GetItemId(material.Selected)
 			});
 		}
 		return result.ToArray();
@@ -779,7 +779,7 @@ public partial class BuildingDefinitionsDock : Control
 	private static OptionButton MakeMaterialOption()
 	{
 		var option = new OptionButton { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-		foreach (var (id, name) in MaterialNames.GetAll())
+		foreach (var (id, name) in MaterialDatabase.GetAllNames())
 			option.AddItem($"{name} ({id})", (int)id);
 		return option;
 	}
@@ -790,7 +790,7 @@ public partial class BuildingDefinitionsDock : Control
 		{
 			if ((MaterialType)option.GetItemId(i) == materialId) return;
 		}
-		option.AddItem($"未知 (#{(int)materialId})", (int)materialId);
+		option.AddItem(MaterialDatabase.FallbackName(materialId), (int)materialId);
 	}
 
 	private static void SelectMaterial(OptionButton option, MaterialType materialId)

@@ -1,11 +1,15 @@
 using Godot;
 using System;
-using System.Collections.Generic;
 
 namespace MySimCity;
 
+/// <summary>
+/// 建筑节点：只负责外观/预览/建造流程，不持有产出组件。
+/// 建造完成时发送 ConstructionFinished 事件，由外部挂载的
+/// ProductionComponent 自行监听并启动产出。
+/// </summary>
 [GlobalClass]
-public partial class Building : Node3D, IUpgradable
+public partial class Building : Node3D, IProducibleBuilding
 {
 	public enum BodyAlignMode
 	{
@@ -14,8 +18,10 @@ public partial class Building : Node3D, IUpgradable
 	}
 
 	/// <summary>当前等级（IUpgradable）。升级后产出组件自动套用新等级区间。</summary>
-	[Export]
-	public int Level { get; set; } = 1;
+	public uint Level { get; set; } = 1;
+
+	/// <summary>建造完成时触发（IProductionOwner）；sender 为完成建造的本建筑。</summary>
+	public event Action<IProducibleBuilding> ConstructionFinished;
 
 	[Export]
 	public float Width = 3.2f;
@@ -72,11 +78,6 @@ public partial class Building : Node3D, IUpgradable
 	private Node3D _bodyRoot;
 	private MeshInstance3D _bodyMesh;
 	private ShaderMaterial _constructionMaterialInstance;
-	private ProductionComponent _productionComponent;
-
-	// _Ready 之前调用 Initialize/ApplyDefinition 时暂存，满足条件后再创建产出组件
-	private IInventory _pendingInventory;
-	private Dictionary<int, ProductionLevelConfig> _pendingProductionTable = new();
 
 	private Vector3 _bodyBaseOffset = Vector3.Zero;
 
@@ -91,60 +92,7 @@ public partial class Building : Node3D, IUpgradable
 		_bodyRoot = GetNode<Node3D>("Body");
 		_bodyMesh = GetNode<MeshInstance3D>("Body/Mesh");
 
-		SetupProduction();
 		SetupBuilding();
-	}
-
-	public void Initialize(IInventory inventory)
-	{
-		ArgumentNullException.ThrowIfNull(inventory);
-
-		_pendingInventory = inventory;
-		SetupProduction();
-	}
-
-	/// <summary>
-	/// 产出表非空且库存已注入时创建/配置产出组件；幂等，
-	/// Initialize/ApplyDefinition/_Ready 三处都可能调用。
-	/// </summary>
-	private void SetupProduction()
-	{
-		if (_pendingProductionTable.Count == 0)
-		{
-			_productionComponent?.StopProduction();
-			return;
-		}
-
-		if (_pendingInventory == null) return;
-
-		if (_productionComponent == null)
-			_productionComponent = new ProductionComponent(this, _pendingProductionTable, _pendingInventory);
-		else
-			_productionComponent.Configure(_pendingProductionTable);
-	}
-
-	/// <summary>把产出表数组转为 Level → 配置 的字典；跳过非法/重复条目并告警。</summary>
-	private static Dictionary<int, ProductionLevelConfig> BuildProductionDict(ProductionLevelConfig[] table)
-	{
-		var dict = new Dictionary<int, ProductionLevelConfig>();
-		if (table == null) return dict;
-
-		foreach (var config in table)
-		{
-			if (config == null) continue;
-			if (config.Level < 1)
-			{
-				GD.PushWarning($"产出表存在非法等级 {config.Level}，已跳过");
-				continue;
-			}
-			if (dict.ContainsKey(config.Level))
-			{
-				GD.PushWarning($"产出表存在重复等级 {config.Level}，已跳过");
-				continue;
-			}
-			dict.Add(config.Level, config);
-		}
-		return dict;
 	}
 
 	private float GridSize => GameConfig.Instance != null ? GameConfig.Instance.GridSize : 1.0f;
@@ -255,7 +203,7 @@ public partial class Building : Node3D, IUpgradable
 	{
 		_mode = Mode.Idle;
 		_bodyMesh.MaterialOverride = BodyMaterial;
-		_productionComponent?.StartProduction();
+		ConstructionFinished?.Invoke(this);
 	}
 
 	public Rect2 GetFootprintRect()
@@ -289,12 +237,7 @@ public partial class Building : Node3D, IUpgradable
 		BodyOffsetZ = def.BodyOffsetZ;
 		Costs = def.Costs ?? [];
 
-		_pendingProductionTable = BuildProductionDict(def.ProductionTable);
-
 		if (IsInsideTree())
-		{
-			SetupProduction();
 			SetupBuilding();
-		}
 	}
 }
