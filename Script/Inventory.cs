@@ -1,4 +1,5 @@
 using Godot;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,9 +10,9 @@ public partial class Inventory : Node, IInventory
 {
 	public static Inventory Instance { get; private set; }
 
-	private readonly Dictionary<MaterialType, uint> _amounts = new()
+	private readonly Dictionary<string, uint> _amounts = new(StringComparer.OrdinalIgnoreCase)
 	{
-		{ MaterialType.Wood, 25 }
+		{ "wood", 25 }
 	};
 
 	[Signal]
@@ -22,12 +23,12 @@ public partial class Inventory : Node, IInventory
 		Instance = this;
 	}
 
-	public uint GetAmount(MaterialType materialId)
+	public uint GetAmount(string materialId)
 	{
-		return _amounts.TryGetValue(materialId, out var amount) ? amount : 0u;
+		return materialId != null && _amounts.TryGetValue(materialId, out var amount) ? amount : 0u;
 	}
 
-	public void Add(MaterialType materialId, uint amount)
+	public void Add(string materialId, uint amount)
 	{
 		if (amount == 0) return;
 		_amounts.TryGetValue(materialId, out var current);
@@ -35,12 +36,12 @@ public partial class Inventory : Node, IInventory
 		EmitSignal(SignalName.MaterialsChanged);
 	}
 
-	public bool CanAfford(MaterialType materialId, uint amount)
+	public bool CanAfford(string materialId, uint amount)
 	{
 		return GetAmount(materialId) >= amount;
 	}
 
-	public bool TrySpend(MaterialType materialId, uint amount)
+	public bool TrySpend(string materialId, uint amount)
 	{
 		if (!CanAfford(materialId, amount)) return false;
 		_amounts[materialId] = GetAmount(materialId) - amount;
@@ -71,7 +72,4 @@ public partial class Inventory : Node, IInventory
 
 		return true;
 	}
-
-	/// <summary>兼容旧 UI 的便捷属性</summary>
-	public uint Wood => GetAmount(MaterialType.Wood);
 }

@@ -4,5 +4,5 @@
 
 [resource]
 script = ExtResource("1_def")
-Id = 1
+Id = "wood"
 DisplayName = "原木"

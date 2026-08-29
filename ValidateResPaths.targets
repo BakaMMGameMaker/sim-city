@@ -1,0 +1,81 @@
+<Project>
+
+  <!--
+    编译后静态校验：扫描项目内所有 .tres/.tscn 的 [ext_resource] path，
+    确保每个 res:// 引用都指向真实存在的文件；发现悬空引用时以编译错误
+    （error）形式报告，直接让 dotnet build 失败，而不是等到运行时再报
+    “找不到资源”。
+    跳过方式：dotnet build /p:ValidateResPaths=false
+    仅逐行文本解析，不依赖 Godot 引擎，速度很快。
+  -->
+  <UsingTask TaskName="ValidateResPaths"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ProjectDir ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Reference Include="netstandard" />
+      <Using Namespace="System" />
+      <Using Namespace="System.Collections.Generic" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var pathPattern = new Regex(@"path\s*=\s*""([^""]*)""", RegexOptions.Compiled);
+        var excludedDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".git", ".godot", ".vs", ".vscode", ".idea", "bin", "obj"
+        };
+
+        int scanned = 0;
+        int missing = 0;
+
+        var root = Path.GetFullPath(ProjectDir);
+        foreach (var pattern in new[] { "*.tres", "*.tscn" })
+        {
+            foreach (var file in Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories))
+            {
+                var rel = file.Substring(root.Length).TrimStart('\\', '/').Replace('\\', '/');
+
+                // 跳过 bin/obj/.godot 等目录（按任意层级目录名判断）
+                bool excluded = false;
+                foreach (var segment in rel.Split('/'))
+                {
+                    if (excludedDirs.Contains(segment)) { excluded = true; break; }
+                }
+                if (excluded) continue;
+
+                scanned++;
+                foreach (var line in File.ReadAllLines(file))
+                {
+                    var trimmed = line.TrimStart();
+                    if (!trimmed.StartsWith("[ext_resource", StringComparison.Ordinal)) continue;
+
+                    var match = pathPattern.Match(trimmed);
+                    if (!match.Success || string.IsNullOrEmpty(match.Groups[1].Value)) continue;
+
+                    var resPath = match.Groups[1].Value;
+                    if (!resPath.StartsWith("res://", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    var local = resPath.Substring("res://".Length);
+                    var full = Path.GetFullPath(Path.Combine(root, local.Replace('/', Path.DirectorySeparatorChar)));
+                    if (File.Exists(full)) continue;
+
+                    missing++;
+                    Log.LogError($"{rel}: 引用了不存在的资源 {resPath}");
+                }
+            }
+        }
+
+        Log.LogMessage(MessageImportance.High, $"资源引用校验：扫描 {scanned} 个 .tres/.tscn，发现 {missing} 个悬空引用。");
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="ValidateResourcePaths"
+          AfterTargets="Build"
+          Condition="'$(ValidateResPaths)' != 'false'">
+    <ValidateResPaths ProjectDir="$(MSBuildProjectDirectory)" />
+  </Target>
+
+</Project>

@@ -31,7 +31,7 @@ project/assembly_name="MySimCity"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/building_definitions/plugin.cfg")
+enabled=PackedStringArray("res://addons/building_definitions/plugin.cfg", "res://addons/definitions_editor/plugin.cfg")
 
 [physics]
 

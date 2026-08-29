@@ -67,8 +67,10 @@ public partial class BuildController : Node3D
 	private void UpdateWoodLabel()
 	{
 		if (WoodLabel != null && Inventory.Instance != null)
-			WoodLabel.Text = $"{MaterialDatabase.GetDisplayName(MaterialType.Wood)}: {Inventory.Instance.Wood}";
+			WoodLabel.Text = $"{MaterialDatabase.GetDisplayName(WoodId)}: {Inventory.Instance.GetAmount(WoodId)}";
 	}
+
+	private const string WoodId = "wood";
 
 	public override void _Input(InputEvent @event)
 	{
@@ -211,7 +213,7 @@ public partial class BuildController : Node3D
 		_preview.Visible = true;
 		_preview.GlobalPosition = snapped;
 
-		_previewValid = IsPositionValid(originCell, _preview.FoundationSize.X, _preview.FoundationSize.Y);
+		_previewValid = IsPositionValid(originCell, _preview.Definition.FoundationSize.X, _preview.Definition.FoundationSize.Y);
 		_preview.SetPreviewValid(_previewValid);
 	}
 
@@ -224,7 +226,7 @@ public partial class BuildController : Node3D
 	{
 		_mode = Mode.Confirming;
 
-		var screenPos = Camera.UnprojectPosition(_preview.GlobalPosition + new Vector3(0, _preview.Height * 0.6f, 0));
+		var screenPos = Camera.UnprojectPosition(_preview.GlobalPosition + new Vector3(0, _preview.Definition.Height * 0.6f, 0));
 		ConfirmPanel.Position = screenPos - ConfirmPanel.Size * 0.5f;
 		ConfirmPanel.Visible = true;
 	}
@@ -242,7 +244,7 @@ public partial class BuildController : Node3D
 
 		var realBuilding = _buildingFactory.CreateBuilding(BuildingScene, this, _selectedDef, _preview.GlobalPosition);
 
-		OccupyCells(realBuilding.GetOriginCell(), realBuilding.FoundationSize.X, realBuilding.FoundationSize.Y);
+		OccupyCells(realBuilding.GetOriginCell(), realBuilding.Definition.FoundationSize.X, realBuilding.Definition.FoundationSize.Y);
 
 		CleanupPreview();
 		_mode = Mode.Idle;

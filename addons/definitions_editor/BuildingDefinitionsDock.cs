@@ -2,7 +2,6 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 namespace MySimCity.EditorTools;
 
@@ -13,8 +12,6 @@ namespace MySimCity.EditorTools;
 [Tool]
 public partial class BuildingDefinitionsDock : Control
 {
-	private static readonly Regex IdPattern = new(@"^[a-z][a-z0-9_]*$", RegexOptions.Compiled);
-
 	private ItemList _list;
 	private Label _statusLabel;
 	private Button _duplicateButton;
@@ -382,7 +379,7 @@ public partial class BuildingDefinitionsDock : Control
 		_selected.FoundationSize = new Vector2I(
 			Mathf.RoundToInt(_foundationXSpin.Value),
 			Mathf.RoundToInt(_foundationZSpin.Value));
-		_selected.BodyAlign = (Building.BodyAlignMode)_bodyAlignOption.Selected;
+		_selected.BodyAlign = (BuildingDefinition.BodyAlignMode)_bodyAlignOption.Selected;
 		_selected.BodyOffsetX = (float)_bodyOffsetXSpin.Value;
 		_selected.BodyOffsetZ = (float)_bodyOffsetZSpin.Value;
 		_selected.Costs = CollectCosts();
@@ -398,10 +395,10 @@ public partial class BuildingDefinitionsDock : Control
 		ClearChildren(_costsBox);
 		if (costs == null) return;
 		foreach (var cost in costs)
-			AddCostRow(cost?.MaterialId ?? (MaterialType)0, cost?.Amount ?? 0);
+			AddCostRow(cost?.MaterialId ?? "", cost?.Amount ?? 0);
 	}
 
-	private void AddCostRow(MaterialType materialId, uint amount)
+	private void AddCostRow(string materialId, uint amount)
 	{
 		var row = new HBoxContainer();
 
@@ -433,7 +430,7 @@ public partial class BuildingDefinitionsDock : Control
 	{
 		if (_selected == null) return;
 		var all = MaterialDatabase.GetAllNames();
-		var defaultId = all.Count > 0 ? all[0].Id : MaterialType.Wood;
+		var defaultId = all.Count > 0 ? all[0].Id : "";
 		AddCostRow(defaultId, 1);
 		MarkDirty();
 	}
@@ -448,11 +445,11 @@ public partial class BuildingDefinitionsDock : Control
 				config?.Level ?? 1u,
 				config?.IntervalSeconds ?? 10.0f,
 				config?.Amount ?? 1,
-				config?.Material ?? MaterialType.Wood);
+				config?.MaterialId ?? "");
 		}
 	}
 
-	private void AddProductionRow(uint level, double interval, uint amount, MaterialType materialId)
+	private void AddProductionRow(uint level, double interval, uint amount, string materialId)
 	{
 		var row = new HBoxContainer();
 
@@ -496,7 +493,7 @@ public partial class BuildingDefinitionsDock : Control
 	{
 		if (_selected == null) return;
 		var all = MaterialDatabase.GetAllNames();
-		var defaultId = all.Count > 0 ? all[0].Id : MaterialType.Wood;
+		var defaultId = all.Count > 0 ? all[0].Id : "";
 		AddProductionRow(1u, 10.0, 1u, defaultId);
 		MarkDirty();
 	}
@@ -510,7 +507,7 @@ public partial class BuildingDefinitionsDock : Control
 			var material = row.GetChild<OptionButton>(0);
 			var amountSpin = row.GetChild<SpinBox>(1);
 			result.Add(new MaterialAmount(
-				(MaterialType)material.GetItemId(material.Selected),
+				material.GetItemMetadata(material.Selected).AsString(),
 				(uint)Mathf.RoundToInt(amountSpin.Value)));
 		}
 		return result.ToArray();
@@ -531,7 +528,7 @@ public partial class BuildingDefinitionsDock : Control
 				Level = (uint)Mathf.RoundToInt(levelSpin.Value),
 				IntervalSeconds = (float)intervalSpin.Value,
 				Amount = (uint)Mathf.RoundToInt(amountSpin.Value),
-				Material = (MaterialType)material.GetItemId(material.Selected)
+				MaterialId = material.GetItemMetadata(material.Selected).AsString()
 			});
 		}
 		return result.ToArray();
@@ -708,9 +705,9 @@ public partial class BuildingDefinitionsDock : Control
 			error = "Id 不能为空";
 			return false;
 		}
-		if (!IdPattern.IsMatch(id))
+		if (!DefinitionIdValidation.IsValid(id))
 		{
-			error = "Id 需匹配 ^[a-z][a-z0-9_]*$（小写字母开头，仅小写字母/数字/下划线）";
+			error = DefinitionIdValidation.ErrorMessage;
 			return false;
 		}
 		foreach (var def in _definitions)
@@ -779,25 +776,29 @@ public partial class BuildingDefinitionsDock : Control
 	private static OptionButton MakeMaterialOption()
 	{
 		var option = new OptionButton { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-		foreach (var (id, name) in MaterialDatabase.GetAllNames())
-			option.AddItem($"{name} ({id})", (int)id);
+		foreach (var materialDef in MaterialDatabase.GetAllNames())
+		{
+			option.AddItem($"{materialDef.DisplayName} ({materialDef.Id})");
+			option.SetItemMetadata(option.ItemCount - 1, materialDef.Id);
+		}
 		return option;
 	}
 
-	private static void EnsureMaterialItem(OptionButton option, MaterialType materialId)
+	private static void EnsureMaterialItem(OptionButton option, string materialId)
 	{
 		for (int i = 0; i < option.ItemCount; i++)
 		{
-			if ((MaterialType)option.GetItemId(i) == materialId) return;
+			if (option.GetItemMetadata(i).AsString() == materialId) return;
 		}
-		option.AddItem(MaterialDatabase.FallbackName(materialId), (int)materialId);
+		option.AddItem(string.IsNullOrEmpty(materialId) ? "（未选择）" : materialId);
+		option.SetItemMetadata(option.ItemCount - 1, materialId);
 	}
 
-	private static void SelectMaterial(OptionButton option, MaterialType materialId)
+	private static void SelectMaterial(OptionButton option, string materialId)
 	{
 		for (int i = 0; i < option.ItemCount; i++)
 		{
-			if ((MaterialType)option.GetItemId(i) == materialId)
+			if (option.GetItemMetadata(i).AsString() == materialId)
 			{
 				option.Select(i);
 				return;

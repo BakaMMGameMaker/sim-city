@@ -5,50 +5,26 @@ namespace MySimCity;
 
 /// <summary>
 /// 建筑节点：只负责外观/预览/建造流程，不持有产出组件。
+/// 几何参数、建造时间与成本等数据全部来自 BuildingDefinition
+/// （经 ApplyDefinition 注入，本节点持有定义引用而非逐字段复制）；
+/// 本节点仅保留场景级视觉资产（材质、地基厚度）与运行时状态（等级/模式）。
 /// 建造完成时发送 ConstructionFinished 事件，由外部挂载的
-/// ProductionComponent 自行监听并启动产出。
+/// ProducingComponent 自行监听并启动产出。
 /// </summary>
 [GlobalClass]
 public partial class Building : Node3D, IProducibleBuilding
 {
-	public enum BodyAlignMode
-	{
-		Center,
-		Offset
-	}
-
 	/// <summary>当前等级（IUpgradable）。升级后产出组件自动套用新等级区间。</summary>
 	public uint Level { get; set; } = 1;
 
-	/// <summary>建造完成时触发（IProductionOwner）；sender 为完成建造的本建筑。</summary>
-	public event Action<IProducibleBuilding> ConstructionFinished;
+	/// <summary>建造完成时触发（IProducibleBuilding）。</summary>
+	public event Action ConstructionFinished;
 
-	[Export]
-	public float Width = 3.2f;
-
-	[Export]
-	public float Depth = 3.2f;
-
-	[Export]
-	public float Height = 12.0f;
-
-	[Export]
-	public float BuildTime = 6.0f;
-
-	[Export]
-	public Vector2I FoundationSize = new(4, 4);
+	/// <summary>数据驱动定义：几何、建造时间、成本、产出表。由工厂/预览流程注入。</summary>
+	public BuildingDefinition Definition { get; private set; }
 
 	[Export]
 	public float FoundationThickness = 0.06f;
-
-	[Export]
-	public BodyAlignMode BodyAlign = BodyAlignMode.Center;
-
-	[Export]
-	public float BodyOffsetX = 0f;
-
-	[Export]
-	public float BodyOffsetZ = 0f;
 
 	[Export]
 	public StandardMaterial3D BodyMaterial;
@@ -71,9 +47,6 @@ public partial class Building : Node3D, IProducibleBuilding
 	[Export]
 	public StandardMaterial3D PreviewInvalidFoundationMaterial;
 
-	[Export]
-	public MaterialAmount[] Costs = [];
-
 	private MeshInstance3D _foundationInstance;
 	private Node3D _bodyRoot;
 	private MeshInstance3D _bodyMesh;
@@ -92,7 +65,18 @@ public partial class Building : Node3D, IProducibleBuilding
 		_bodyRoot = GetNode<Node3D>("Body");
 		_bodyMesh = GetNode<MeshInstance3D>("Body/Mesh");
 
-		SetupBuilding();
+		if (Definition != null)
+			SetupBuilding();
+	}
+
+	/// <summary>注入数据驱动定义并重建外观。定义未注入前建筑不生成几何。</summary>
+	public void ApplyDefinition(BuildingDefinition def)
+	{
+		ArgumentNullException.ThrowIfNull(def);
+
+		Definition = def;
+		if (IsInsideTree())
+			SetupBuilding();
 	}
 
 	private float GridSize => GameConfig.Instance != null ? GameConfig.Instance.GridSize : 1.0f;
@@ -106,23 +90,25 @@ public partial class Building : Node3D, IProducibleBuilding
 
 	private void ComputeBodyOffset()
 	{
-		if (BodyAlign == BodyAlignMode.Center)
+		var def = Definition;
+		if (def.BodyAlign == BuildingDefinition.BodyAlignMode.Center)
 		{
 			_bodyBaseOffset = Vector3.Zero;
 			return;
 		}
 
-		float fw = FoundationSize.X * GridSize;
-		float fd = FoundationSize.Y * GridSize;
-		float bodyCenterX = -fw * 0.5f + BodyOffsetX + Width * 0.5f;
-		float bodyCenterZ = -fd * 0.5f + BodyOffsetZ + Depth * 0.5f;
+		float fw = def.FoundationSize.X * GridSize;
+		float fd = def.FoundationSize.Y * GridSize;
+		float bodyCenterX = -fw * 0.5f + def.BodyOffsetX + def.Width * 0.5f;
+		float bodyCenterZ = -fd * 0.5f + def.BodyOffsetZ + def.Depth * 0.5f;
 		_bodyBaseOffset = new Vector3(bodyCenterX, 0f, bodyCenterZ);
 	}
 
 	private void SetupFoundation()
 	{
-		float worldW = FoundationSize.X * GridSize;
-		float worldD = FoundationSize.Y * GridSize;
+		var def = Definition;
+		float worldW = def.FoundationSize.X * GridSize;
+		float worldD = def.FoundationSize.Y * GridSize;
 
 		var box = new BoxMesh { Size = new Vector3(worldW, FoundationThickness, worldD) };
 		_foundationInstance.Mesh = box;
@@ -132,14 +118,14 @@ public partial class Building : Node3D, IProducibleBuilding
 
 	private void SetupBody()
 	{
+		var def = Definition;
 		_bodyRoot.Position = _bodyBaseOffset;
 
-		var box = new BoxMesh { Size = new Vector3(Width, Height, Depth) };
+		var box = new BoxMesh { Size = new Vector3(def.Width, def.Height, def.Depth) };
 		_bodyMesh.Mesh = box;
 		_bodyMesh.MaterialOverride = BodyMaterial;
-		_bodyMesh.Position = new Vector3(0, Height * 0.5f, 0);
+		_bodyMesh.Position = new Vector3(0, def.Height * 0.5f, 0);
 	}
-
 
 	public void EnterPreview()
 	{
@@ -185,7 +171,7 @@ public partial class Building : Node3D, IProducibleBuilding
 		var tween = CreateTween();
 		tween.SetEase(Tween.EaseType.Out);
 		tween.SetTrans(Tween.TransitionType.Cubic);
-		tween.TweenMethod(Callable.From<float>(UpdateConstruction), 0.0f, 1.0f, BuildTime);
+		tween.TweenMethod(Callable.From<float>(UpdateConstruction), 0.0f, 1.0f, Definition.BuildTime);
 		tween.Finished += OnConstructionFinished;
 	}
 
@@ -196,20 +182,22 @@ public partial class Building : Node3D, IProducibleBuilding
 
 	private void SetBuildHeight(float progress)
 	{
-		_constructionMaterialInstance.SetShaderParameter("build_height", -Height * 0.5f + progress * Height);
+		_constructionMaterialInstance.SetShaderParameter("build_height", -Definition.Height * 0.5f + progress * Definition.Height);
 	}
 
 	private void OnConstructionFinished()
 	{
 		_mode = Mode.Idle;
 		_bodyMesh.MaterialOverride = BodyMaterial;
-		ConstructionFinished?.Invoke(this);
+		ConstructionFinished?.Invoke();
 	}
 
 	public Rect2 GetFootprintRect()
 	{
-		float worldW = FoundationSize.X * GridSize;
-		float worldD = FoundationSize.Y * GridSize;
+		if (Definition == null) return default;
+
+		float worldW = Definition.FoundationSize.X * GridSize;
+		float worldD = Definition.FoundationSize.Y * GridSize;
 		float halfW = worldW * 0.5f;
 		float halfD = worldD * 0.5f;
 		return new Rect2(GlobalPosition.X - halfW, GlobalPosition.Z - halfD, worldW, worldD);
@@ -221,23 +209,5 @@ public partial class Building : Node3D, IProducibleBuilding
 			Mathf.RoundToInt(GlobalPosition.X / GridSize),
 			Mathf.RoundToInt(GlobalPosition.Z / GridSize)
 		);
-	}
-
-	public void ApplyDefinition(BuildingDefinition def)
-	{
-		ArgumentNullException.ThrowIfNull(def);
-
-		Width = def.Width;
-		Depth = def.Depth;
-		Height = def.Height;
-		BuildTime = def.BuildTime;
-		FoundationSize = def.FoundationSize;
-		BodyAlign = def.BodyAlign;
-		BodyOffsetX = def.BodyOffsetX;
-		BodyOffsetZ = def.BodyOffsetZ;
-		Costs = def.Costs ?? [];
-
-		if (IsInsideTree())
-			SetupBuilding();
 	}
 }

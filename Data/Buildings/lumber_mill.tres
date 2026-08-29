@@ -6,7 +6,7 @@
 
 [sub_resource type="Resource" id="MaterialAmount_wood5"]
 script = ExtResource("2_amt")
-MaterialId = 1
+MaterialId = "wood"
 Amount = 5
 
 [sub_resource type="Resource" id="Production_l1"]
@@ -14,21 +14,21 @@ script = ExtResource("3_prod")
 Level = 1
 IntervalSeconds = 12.0
 Amount = 2
-MaterialId = 1
+Material = "wood"
 
 [sub_resource type="Resource" id="Production_l2"]
 script = ExtResource("3_prod")
 Level = 2
 IntervalSeconds = 10.0
 Amount = 3
-MaterialId = 1
+Material = "wood"
 
 [sub_resource type="Resource" id="Production_l3"]
 script = ExtResource("3_prod")
 Level = 3
 IntervalSeconds = 8.0
 Amount = 5
-MaterialId = 1
+Material = "wood"
 
 [resource]
 script = ExtResource("1_def")

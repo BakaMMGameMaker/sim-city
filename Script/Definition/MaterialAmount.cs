@@ -7,7 +7,7 @@ namespace MySimCity;
 public partial class MaterialAmount : Resource
 {
 	[Export]
-	public MaterialType MaterialId { get; set; } = MaterialType.Wood;
+	public string MaterialId { get; set; } = "";
 
 	[Export]
 	public uint Amount { get; set; } = 1;
@@ -16,7 +16,7 @@ public partial class MaterialAmount : Resource
 	{
 	}
 
-	public MaterialAmount(MaterialType materialId, uint amount)
+	public MaterialAmount(string materialId, uint amount)
 	{
 		MaterialId = materialId;
 		Amount = amount;

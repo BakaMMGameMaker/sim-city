@@ -8,8 +8,7 @@ namespace MySimCity;
 /// 产出组件。
 /// 由工厂在产出表非空时创建并挂到宿主上；
 /// 构造注入 宿主 / 产出表 / 库存 / SceneTree。
-/// 监听事件以开始建造，如宿主建筑建造完毕的事件，
-/// 校验完成建造的对象与自身 Owner 匹配后自动开始产出。
+/// 订阅宿主自身的 ConstructionFinished 事件，事件触发后开始产出。
 /// 计时使用 SceneTreeTimer：Owner 被销毁后挂起的 timer 仍会触发一次，
 /// 靠 _running 与 IsInstanceValid(owner) 双重守卫。
 /// </summary>
@@ -37,9 +36,8 @@ public sealed class ProducingComponent
 		_owner.ConstructionFinished += OnOwnerConstructionFinished;
 	}
 
-	private void OnOwnerConstructionFinished(IProducibleBuilding sender)
+	private void OnOwnerConstructionFinished()
 	{
-		if (!ReferenceEquals(sender, _owner)) return;
 		if (_running) return;
 
 		_running = true;
@@ -57,7 +55,7 @@ public sealed class ProducingComponent
 			return;
 		}
 
-		var timer = _tree.CreateTimer(Mathf.Max(0.1f, config.IntervalSeconds));
+		var timer = _tree.CreateTimer(config.IntervalSeconds);
 		timer.Timeout += OnTimeout;
 	}
 
@@ -78,7 +76,7 @@ public sealed class ProducingComponent
 			return;
 		}
 
-		_inventory.Add(config.Material, config.Amount);
+		_inventory.Add(config.MaterialId, config.Amount);
 		ArmTimer();
 	}
 

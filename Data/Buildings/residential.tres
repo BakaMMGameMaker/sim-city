@@ -5,7 +5,7 @@
 
 [sub_resource type="Resource" id="MaterialAmount_wood12"]
 script = ExtResource("2_amt")
-MaterialId = 1
+MaterialId = "wood"
 Amount = 12
 
 [resource]

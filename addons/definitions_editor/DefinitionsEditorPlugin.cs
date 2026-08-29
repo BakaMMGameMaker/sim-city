@@ -4,11 +4,11 @@ using Godot;
 namespace MySimCity.EditorTools;
 
 /// <summary>
-/// 编辑器插件入口：注册「建筑类型定义」与「材料类型定义」Dock 到左侧停靠区。
+/// 编辑器插件入口：注册「建筑类型定义」与「材料显示名定义」Dock 到左侧停靠区。
 /// 整个类被 #if TOOLS 包裹，导出构建不会包含编辑器代码。
 /// </summary>
 [Tool]
-public partial class BuildingDefinitionsPlugin : EditorPlugin
+public partial class DefinitionsEditorPlugin : EditorPlugin
 {
 	private EditorDock _buildingDock;
 	private EditorDock _materialDock;
@@ -16,7 +16,7 @@ public partial class BuildingDefinitionsPlugin : EditorPlugin
 	public override void _EnterTree()
 	{
 		_buildingDock = AddDefinitionsDock(new BuildingDefinitionsDock(), "建筑类型定义");
-		_materialDock = AddDefinitionsDock(new MaterialDefinitionsDock(), "材料类型定义");
+		_materialDock = AddDefinitionsDock(new MaterialDefinitionsDock(), "材料显示名定义");
 	}
 
 	private EditorDock AddDefinitionsDock(Control ui, string title)
