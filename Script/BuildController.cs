@@ -126,9 +126,9 @@ public partial class BuildController : Node3D
 		_mode = Mode.Dragging;
 		_lastOriginCell = null;
 		_preview = BuildingScene.Instantiate<Building>();
+		AddChild(_preview);
 		_preview.Initialize(_inventory);
 		_preview.ApplyDefinition(_selectedDef);
-		AddChild(_preview);
 		_preview.EnterPreview();
 		UpdatePreviewPosition();
 	}
@@ -202,9 +202,9 @@ public partial class BuildController : Node3D
 		}
 
 		var realBuilding = BuildingScene.Instantiate<Building>();
+		AddChild(realBuilding);
 		realBuilding.Initialize(_inventory);
 		realBuilding.ApplyDefinition(_selectedDef);
-		AddChild(realBuilding);
 		realBuilding.GlobalPosition = _preview.GlobalPosition;
 		realBuilding.StartConstruction();
 

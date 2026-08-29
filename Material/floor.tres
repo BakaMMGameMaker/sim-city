@@ -1,8 +1,9 @@
 [gd_resource type="StandardMaterial3D" format=3 uid="uid://da7f1d2f7r2pq"]
 
 [resource]
-albedo_color = Color(0.15170373, 0.22091639, 0.3133042, 1)
-metallic = 0.7
+albedo_color = Color(0.13, 0.18, 0.25, 1)
+metallic = 0.15
+roughness = 0.9
 emission_enabled = true
-emission = Color(0.24780053, 0.42358288, 0.58383155, 1)
-emission_energy_multiplier = 0.4
+emission = Color(0.1, 0.15, 0.22, 1)
+emission_energy_multiplier = 0.15

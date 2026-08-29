@@ -9,7 +9,7 @@
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ahgxp"]
 sky_top_color = Color(0.09985284, 0.15170373, 0.2716998, 1)
 sky_horizon_color = Color(0.1897483, 0.3133042, 0.46135613, 1)
-sky_energy_multiplier = 0.6
+sky_energy_multiplier = 1.0
 ground_bottom_color = Color(0.09985284, 0.12835406, 0.1897483, 1)
 ground_horizon_color = Color(0.15170373, 0.24780053, 0.38109186, 1)
 ground_energy_multiplier = 0.4
@@ -26,6 +26,12 @@ sky = SubResource("Sky_igapa")
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1861119320]
 transform = Transform3D(0.70710677, -0.35355338, 0.6123724, 0, 0.8660254, 0.5, -0.70710677, -0.35355338, 0.6123724, 12, 19, 12)
 script = ExtResource("1_ejll3")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, 0.383, -0.3214, 0, 0.6428, 0.766, 0.5, -0.6634, 0.5567, 0, 0, 0)
+light_color = Color(1, 0.97, 0.92, 1)
+light_energy = 1.4
+shadow_enabled = true
 
 [node name="Floor" parent="." unique_id=961451367 instance=ExtResource("2_dlwip")]
 

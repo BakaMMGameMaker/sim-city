@@ -2,38 +2,29 @@
 
 [ext_resource type="Script" uid="uid://cxked1sq6limw" path="res://Script/Building.cs" id="1_8saja"]
 [ext_resource type="Material" uid="uid://cd48pnwgfwori" path="res://Material/neon_blue.tres" id="2_p48t8"]
-[ext_resource type="Material" uid="uid://dfogawys884er" path="res://Material/neon_dark_blue.tres" id="3_wyfv7"]
-[ext_resource type="Script" uid="uid://buw3sgpp8edtk" path="res://Script/Component/EdgeComponent.cs" id="4_7grcv"]
 [ext_resource type="Material" path="res://Material/preview_valid_body.tres" id="5_valid_body"]
 [ext_resource type="Material" path="res://Material/preview_invalid_body.tres" id="6_invalid_body"]
-[ext_resource type="Material" path="res://Material/preview_valid_edge.tres" id="7_valid_edge"]
-[ext_resource type="Material" path="res://Material/preview_invalid_edge.tres" id="8_invalid_edge"]
 [ext_resource type="Material" path="res://Material/foundation.tres" id="9_foundation"]
 [ext_resource type="Material" path="res://Material/preview_valid_foundation.tres" id="10_valid_found"]
 [ext_resource type="Material" path="res://Material/preview_invalid_foundation.tres" id="11_invalid_found"]
 [ext_resource type="Script" uid="uid://rub144nfh22w" path="res://Script/Component/ProductionComponent.cs" id="12_prod"]
+[ext_resource type="Material" path="res://Material/construction.tres" id="13_construction"]
 
 [node name="Building" type="Node3D" unique_id=97996295]
 script = ExtResource("1_8saja")
 BodyMaterial = ExtResource("2_p48t8")
-EdgeMaterial = ExtResource("3_wyfv7")
+ConstructionMaterial = ExtResource("13_construction")
 FoundationMaterial = ExtResource("9_foundation")
 PreviewValidBodyMaterial = ExtResource("5_valid_body")
 PreviewInvalidBodyMaterial = ExtResource("6_invalid_body")
-PreviewValidEdgeMaterial = ExtResource("7_valid_edge")
-PreviewInvalidEdgeMaterial = ExtResource("8_invalid_edge")
 PreviewValidFoundationMaterial = ExtResource("10_valid_found")
 PreviewInvalidFoundationMaterial = ExtResource("11_invalid_found")
-Costs = [null]
 
 [node name="Foundation" type="MeshInstance3D" parent="." unique_id=1766803547]
 
 [node name="Body" type="Node3D" parent="." unique_id=1579796882]
 
 [node name="Mesh" type="MeshInstance3D" parent="Body" unique_id=854019957]
-
-[node name="EdgeComponent" type="Node3D" parent="Body" unique_id=1728508174]
-script = ExtResource("4_7grcv")
 
 [node name="ProductionComponent" type="Node" parent="." unique_id=2051034956]
 script = ExtResource("12_prod")

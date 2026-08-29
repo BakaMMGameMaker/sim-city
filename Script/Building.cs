@@ -43,10 +43,7 @@ public partial class Building : Node3D
 	public StandardMaterial3D BodyMaterial;
 
 	[Export]
-	public StandardMaterial3D EdgeMaterial;
-
-	[Export]
-	public float EdgeThickness = 0.07f;
+	public ShaderMaterial ConstructionMaterial;
 
 	[Export]
 	public StandardMaterial3D FoundationMaterial;
@@ -56,12 +53,6 @@ public partial class Building : Node3D
 
 	[Export]
 	public StandardMaterial3D PreviewInvalidBodyMaterial;
-
-	[Export]
-	public StandardMaterial3D PreviewValidEdgeMaterial;
-
-	[Export]
-	public StandardMaterial3D PreviewInvalidEdgeMaterial;
 
 	[Export]
 	public StandardMaterial3D PreviewValidFoundationMaterial;
@@ -75,8 +66,13 @@ public partial class Building : Node3D
 	private MeshInstance3D _foundationInstance;
 	private Node3D _bodyRoot;
 	private MeshInstance3D _bodyMesh;
-	private EdgeComponent _edgeComponent;
+	private ShaderMaterial _constructionMaterialInstance;
 	private ProductionComponent _productionComponent;
+
+	// _Ready 之前调用 Initialize/ApplyDefinition 时暂存，_Ready 后再注入组件
+	private IInventory _pendingInventory;
+	private ProductionLevelConfig[] _pendingProductionTable = [];
+	private int _pendingLevel = 1;
 
 	private Vector3 _bodyBaseOffset = Vector3.Zero;
 
@@ -90,16 +86,22 @@ public partial class Building : Node3D
 		_foundationInstance = GetNode<MeshInstance3D>("Foundation");
 		_bodyRoot = GetNode<Node3D>("Body");
 		_bodyMesh = GetNode<MeshInstance3D>("Body/Mesh");
-		_edgeComponent = GetNode<EdgeComponent>("Body/EdgeComponent");
 		_productionComponent = GetNode<ProductionComponent>("ProductionComponent");
+
+		if (_pendingInventory != null)
+			_productionComponent.Initialize(_pendingInventory);
+		_productionComponent.Configure(_pendingProductionTable, _pendingLevel);
 
 		SetupBuilding();
 	}
 
 	public void Initialize(IInventory inventory)
 	{
-        ArgumentNullException.ThrowIfNull(inventory);
-        _productionComponent?.Initialize(inventory);
+		ArgumentNullException.ThrowIfNull(inventory);
+
+		_pendingInventory = inventory;
+		if (_productionComponent != null)
+			_productionComponent.Initialize(inventory);
 	}
 
 	private float GridSize => GameConfig.Instance != null ? GameConfig.Instance.GridSize : 1.0f;
@@ -109,7 +111,6 @@ public partial class Building : Node3D
 		ComputeBodyOffset();
 		SetupFoundation();
 		SetupBody();
-		SetupEdgeComponent();
 	}
 
 	private void ComputeBodyOffset()
@@ -148,34 +149,10 @@ public partial class Building : Node3D
 		_bodyMesh.Position = new Vector3(0, Height * 0.5f, 0);
 	}
 
-	private void SetupEdgeComponent()
-	{
-		_edgeComponent.Setup(new EdgeComponent.EdgeSetupConfig
-		{
-			OwnerWidth = Width,
-			OwnerDepth = Depth,
-			OwnerHeight = Height,
-			Thickness = EdgeThickness,
-			Material = EdgeMaterial,
-			VerticalUpdater = (node, state) =>
-			{
-				node.Scale = new Vector3(node.Scale.X, state.ScaleY, node.Scale.Z);
-				node.Position = new Vector3(node.Position.X, state.Top / 2f, node.Position.Z);
-			},
-			TopUpdater = (node, state) =>
-			{
-				node.Position = new Vector3(node.Position.X, state.Top, node.Position.Z);
-			},
-			BottomUpdater = (_, _) => { },
-		});
-	}
 
 	public void EnterPreview()
 	{
 		_mode = Mode.Preview;
-		_bodyMesh.Scale = Vector3.One;
-		_bodyMesh.Position = new Vector3(0, Height * 0.5f, 0);
-		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(1.0f, Height));
 	}
 
 	public void SetPreviewValid(bool valid)
@@ -184,18 +161,15 @@ public partial class Building : Node3D
 
 		var foundationMat = valid ? PreviewValidFoundationMaterial : PreviewInvalidFoundationMaterial;
 		var bodyMat = valid ? PreviewValidBodyMaterial : PreviewInvalidBodyMaterial;
-		var edgeMat = valid ? PreviewValidEdgeMaterial : PreviewInvalidEdgeMaterial;
 
 		_foundationInstance.MaterialOverride = foundationMat;
 		_bodyMesh.MaterialOverride = bodyMat;
-		_edgeComponent.SetMaterial(edgeMat);
 	}
 
 	public void ExitPreview()
 	{
 		_foundationInstance.MaterialOverride = FoundationMaterial;
 		_bodyMesh.MaterialOverride = BodyMaterial;
-		_edgeComponent.SetMaterial(EdgeMaterial);
 	}
 
 	public void StartConstruction()
@@ -203,8 +177,6 @@ public partial class Building : Node3D
 		_mode = Mode.Constructing;
 
 		_foundationInstance.MaterialOverride = FoundationMaterial;
-		_bodyMesh.MaterialOverride = BodyMaterial;
-		_edgeComponent.SetMaterial(EdgeMaterial);
 
 		InitConstruction();
 		StartConstructionTween();
@@ -212,9 +184,9 @@ public partial class Building : Node3D
 
 	private void InitConstruction()
 	{
-		_bodyMesh.Scale = new Vector3(1, 0, 1);
-		_bodyMesh.Position = new Vector3(0, 0, 0);
-		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(0.0f, 0.0f));
+		_constructionMaterialInstance = (ShaderMaterial)ConstructionMaterial.Duplicate();
+		_bodyMesh.MaterialOverride = _constructionMaterialInstance;
+		SetBuildHeight(0.0f);
 	}
 
 	private void StartConstructionTween()
@@ -228,18 +200,18 @@ public partial class Building : Node3D
 
 	private void UpdateConstruction(float progress)
 	{
-		float scaleY = progress;
-		float top = progress * Height;
+		SetBuildHeight(progress);
+	}
 
-		_bodyMesh.Scale = new Vector3(1, scaleY, 1);
-		_bodyMesh.Position = new Vector3(0, top / 2f, 0);
-
-		_edgeComponent.Update(new EdgeComponent.BuildingConstructionState(scaleY, top));
+	private void SetBuildHeight(float progress)
+	{
+		_constructionMaterialInstance.SetShaderParameter("build_height", -Height * 0.5f + progress * Height);
 	}
 
 	private void OnConstructionFinished()
 	{
 		_mode = Mode.Idle;
+		_bodyMesh.MaterialOverride = BodyMaterial;
 		_productionComponent.StartProduction();
 	}
 
@@ -262,9 +234,9 @@ public partial class Building : Node3D
 
 	public void ApplyDefinition(BuildingDefinition def)
 	{
-        ArgumentNullException.ThrowIfNull(def);
+		ArgumentNullException.ThrowIfNull(def);
 
-        Width = def.Width;
+		Width = def.Width;
 		Depth = def.Depth;
 		Height = def.Height;
 		BuildTime = def.BuildTime;
@@ -274,7 +246,10 @@ public partial class Building : Node3D
 		BodyOffsetZ = def.BodyOffsetZ;
 		Costs = def.Costs ?? [];
 
-		_productionComponent.Configure(def.ProductionTable, level: 1);
+		_pendingProductionTable = def.ProductionTable ?? [];
+		_pendingLevel = 1;
+		if (_productionComponent != null)
+			_productionComponent.Configure(_pendingProductionTable, _pendingLevel);
 
 		if (IsInsideTree())
 		{

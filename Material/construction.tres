@@ -1,0 +1,6 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://Shader/building_construction.gdshader" id="1_construction_shader"]
+
+[resource]
+shader = ExtResource("1_construction_shader")
