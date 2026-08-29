@@ -398,10 +398,10 @@ public partial class BuildingDefinitionsDock : Control
 		ClearChildren(_costsBox);
 		if (costs == null) return;
 		foreach (var cost in costs)
-			AddCostRow(cost?.MaterialId ?? 0, cost?.Amount ?? 0);
+			AddCostRow(cost?.MaterialId ?? (MaterialType)0, cost?.Amount ?? 0);
 	}
 
-	private void AddCostRow(uint materialId, uint amount)
+	private void AddCostRow(MaterialType materialId, uint amount)
 	{
 		var row = new HBoxContainer();
 
@@ -433,7 +433,7 @@ public partial class BuildingDefinitionsDock : Control
 	{
 		if (_selected == null) return;
 		var all = MaterialNames.GetAll();
-		var defaultId = all.Count > 0 ? all[0].Id : 0u;
+		var defaultId = all.Count > 0 ? all[0].Id : MaterialType.Wood;
 		AddCostRow(defaultId, 1);
 		MarkDirty();
 	}
@@ -448,11 +448,11 @@ public partial class BuildingDefinitionsDock : Control
 				config?.Level ?? 1,
 				config?.IntervalSeconds ?? 10.0f,
 				config?.Amount ?? 1,
-				config?.MaterialId ?? MaterialIds.Wood);
+				config?.MaterialId ?? MaterialType.Wood);
 		}
 	}
 
-	private void AddProductionRow(int level, double interval, uint amount, uint materialId)
+	private void AddProductionRow(int level, double interval, uint amount, MaterialType materialId)
 	{
 		var row = new HBoxContainer();
 
@@ -496,7 +496,7 @@ public partial class BuildingDefinitionsDock : Control
 	{
 		if (_selected == null) return;
 		var all = MaterialNames.GetAll();
-		var defaultId = all.Count > 0 ? all[0].Id : 0u;
+		var defaultId = all.Count > 0 ? all[0].Id : MaterialType.Wood;
 		AddProductionRow(1, 10.0, 1, defaultId);
 		MarkDirty();
 	}
@@ -510,7 +510,7 @@ public partial class BuildingDefinitionsDock : Control
 			var material = row.GetChild<OptionButton>(0);
 			var amountSpin = row.GetChild<SpinBox>(1);
 			result.Add(new MaterialAmount(
-				(uint)material.GetItemId(material.Selected),
+				(MaterialType)material.GetItemId(material.Selected),
 				(uint)Mathf.RoundToInt(amountSpin.Value)));
 		}
 		return result.ToArray();
@@ -531,7 +531,7 @@ public partial class BuildingDefinitionsDock : Control
 				Level = Mathf.RoundToInt(levelSpin.Value),
 				IntervalSeconds = (float)intervalSpin.Value,
 				Amount = (uint)Mathf.RoundToInt(amountSpin.Value),
-				MaterialId = (uint)material.GetItemId(material.Selected)
+				MaterialId = (MaterialType)material.GetItemId(material.Selected)
 			});
 		}
 		return result.ToArray();
@@ -784,20 +784,20 @@ public partial class BuildingDefinitionsDock : Control
 		return option;
 	}
 
-	private static void EnsureMaterialItem(OptionButton option, uint materialId)
+	private static void EnsureMaterialItem(OptionButton option, MaterialType materialId)
 	{
 		for (int i = 0; i < option.ItemCount; i++)
 		{
-			if ((uint)option.GetItemId(i) == materialId) return;
+			if ((MaterialType)option.GetItemId(i) == materialId) return;
 		}
-		option.AddItem($"未知 (#{materialId})", (int)materialId);
+		option.AddItem($"未知 (#{(int)materialId})", (int)materialId);
 	}
 
-	private static void SelectMaterial(OptionButton option, uint materialId)
+	private static void SelectMaterial(OptionButton option, MaterialType materialId)
 	{
 		for (int i = 0; i < option.ItemCount; i++)
 		{
-			if ((uint)option.GetItemId(i) == materialId)
+			if ((MaterialType)option.GetItemId(i) == materialId)
 			{
 				option.Select(i);
 				return;

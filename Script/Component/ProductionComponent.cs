@@ -1,92 +1,112 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 namespace MySimCity;
 
 /// <summary>
-/// 产出组件。挂载在 Building 上即可让该建筑具备周期性产出能力。
-/// 通过 Initialize(IInventory) 注入库存，禁止直接访问 Inventory.Instance。
+/// 建筑产出组件（纯 C# 类，非节点）。
+/// 由 Building 在产出表非空时创建并持有；构造注入 Owner / 产出表 / 库存，
+/// 建造完成时由 Building 直接调用 StartProduction。
+/// 计时使用 SceneTreeTimer：建筑被销毁后挂起的 timer 仍会触发一次，
+/// 靠 _running 与 IsInstanceValid(_owner) 双重守卫。
 /// </summary>
-[GlobalClass]
-public partial class ProductionComponent : Node
+public sealed class ProductionComponent : IUpgradable
 {
-	[Export]
-	public int Level { get; set; } = 1;
-
-	[Export]
-	public ProductionLevelConfig[] ProductionTable { get; set; } = [];
-
-	private IInventory _inventory;
-	private Timer _timer;
+	private readonly Building _owner;
+	private readonly IInventory _inventory;
+	private Dictionary<int, ProductionLevelConfig> _table;
 	private bool _running;
 
-	public void Initialize(IInventory inventory)
+	/// <summary>等级取自 Owner，升级后下一次产出自动套用新等级区间。</summary>
+	public int Level => _owner.Level;
+
+	public ProductionComponent(
+		Building owner,
+		IReadOnlyDictionary<int, ProductionLevelConfig> table,
+		IInventory inventory)
 	{
+		_owner = owner ?? throw new ArgumentNullException(nameof(owner));
 		_inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+		Configure(table);
 	}
 
-	public void Configure(ProductionLevelConfig[] table, int level = 1)
+	/// <summary>更新产出表（Level 为键）。</summary>
+	public void Configure(IReadOnlyDictionary<int, ProductionLevelConfig> table)
 	{
-		ProductionTable = table ?? [];
-		Level = level;
+		_table = table != null
+			? new Dictionary<int, ProductionLevelConfig>(table)
+			: new Dictionary<int, ProductionLevelConfig>();
 	}
 
 	public void StartProduction()
 	{
-		if (_inventory == null)
+		if (_running) return;
+
+		if (_owner.GetTree() == null)
 		{
-			GD.PushError($"{GetPath()}: ProductionComponent 未注入 IInventory，无法启动产出");
+			GD.PushError($"ProductionComponent 无法启动产出：{_owner.Name} 不在场景树中");
 			return;
 		}
 
-		var config = GetCurrentProductionConfig();
-		if (config == null) return;
-
-		if (_timer == null)
-		{
-			_timer = new Timer
-			{
-				Name = "ProductionTimer",
-				OneShot = false,
-				Autostart = false
-			};
-			AddChild(_timer);
-			_timer.Timeout += OnProductionTick;
-		}
-
-		_timer.WaitTime = Mathf.Max(0.1f, config.IntervalSeconds);
-		_timer.Start();
 		_running = true;
+		ArmTimer();
 	}
 
 	public void StopProduction()
 	{
-		_timer?.Stop();
 		_running = false;
 	}
 
-	private ProductionLevelConfig GetCurrentProductionConfig()
+	private void ArmTimer()
 	{
-		if (ProductionTable == null || ProductionTable.Length == 0)
-			return null;
-
-		ProductionLevelConfig best = null;
-		foreach (var c in ProductionTable)
+		var config = FindBestConfig();
+		if (config == null)
 		{
-			if (c == null) continue;
-			if (c.Level <= Level && (best == null || c.Level > best.Level))
-				best = c;
+			_running = false;
+			return;
 		}
-		return best;
+
+		var tree = _owner.GetTree();
+		if (tree == null)
+		{
+			_running = false;
+			return;
+		}
+
+		var timer = tree.CreateTimer(Mathf.Max(0.1f, config.IntervalSeconds));
+		timer.Timeout += OnTimeout;
 	}
 
-	private void OnProductionTick()
+	private void OnTimeout()
 	{
-		if (!_running || _inventory == null) return;
+		if (!_running || !GodotObject.IsInstanceValid(_owner)) return;
 
-		var config = GetCurrentProductionConfig();
-		if (config == null) return;
+		var config = FindBestConfig();
+		if (config == null)
+		{
+			_running = false;
+			return;
+		}
 
 		_inventory.Add(config.MaterialId, config.Amount);
+		ArmTimer();
+	}
+
+	/// <summary>取不高于当前等级的最高级配置（与原实现语义一致）。</summary>
+	private ProductionLevelConfig FindBestConfig()
+	{
+		ProductionLevelConfig best = null;
+		int bestLevel = 0;
+		foreach (var (level, config) in _table)
+		{
+			if (config == null || level > Level) continue;
+			if (best == null || level > bestLevel)
+			{
+				best = config;
+				bestLevel = level;
+			}
+		}
+		return best;
 	}
 }

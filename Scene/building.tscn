@@ -7,7 +7,6 @@
 [ext_resource type="Material" path="res://Material/foundation.tres" id="9_foundation"]
 [ext_resource type="Material" path="res://Material/preview_valid_foundation.tres" id="10_valid_found"]
 [ext_resource type="Material" path="res://Material/preview_invalid_foundation.tres" id="11_invalid_found"]
-[ext_resource type="Script" uid="uid://rub144nfh22w" path="res://Script/Component/ProductionComponent.cs" id="12_prod"]
 [ext_resource type="Material" path="res://Material/construction.tres" id="13_construction"]
 
 [node name="Building" type="Node3D" unique_id=97996295]
@@ -25,6 +24,3 @@ PreviewInvalidFoundationMaterial = ExtResource("11_invalid_found")
 [node name="Body" type="Node3D" parent="." unique_id=1579796882]
 
 [node name="Mesh" type="MeshInstance3D" parent="Body" unique_id=854019957]
-
-[node name="ProductionComponent" type="Node" parent="." unique_id=2051034956]
-script = ExtResource("12_prod")

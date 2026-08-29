@@ -9,9 +9,9 @@ public partial class Inventory : Node, IInventory
 {
 	public static Inventory Instance { get; private set; }
 
-	private readonly Dictionary<uint, uint> _amounts = new()
+	private readonly Dictionary<MaterialType, uint> _amounts = new()
 	{
-		{ MaterialIds.Wood, 25 }
+		{ MaterialType.Wood, 25 }
 	};
 
 	[Signal]
@@ -22,12 +22,12 @@ public partial class Inventory : Node, IInventory
 		Instance = this;
 	}
 
-	public uint GetAmount(uint materialId)
+	public uint GetAmount(MaterialType materialId)
 	{
 		return _amounts.TryGetValue(materialId, out var amount) ? amount : 0u;
 	}
 
-	public void Add(uint materialId, uint amount)
+	public void Add(MaterialType materialId, uint amount)
 	{
 		if (amount == 0) return;
 		_amounts.TryGetValue(materialId, out var current);
@@ -35,12 +35,12 @@ public partial class Inventory : Node, IInventory
 		EmitSignal(SignalName.MaterialsChanged);
 	}
 
-	public bool CanAfford(uint materialId, uint amount)
+	public bool CanAfford(MaterialType materialId, uint amount)
 	{
 		return GetAmount(materialId) >= amount;
 	}
 
-	public bool TrySpend(uint materialId, uint amount)
+	public bool TrySpend(MaterialType materialId, uint amount)
 	{
 		if (!CanAfford(materialId, amount)) return false;
 		_amounts[materialId] = GetAmount(materialId) - amount;
@@ -73,5 +73,5 @@ public partial class Inventory : Node, IInventory
 	}
 
 	/// <summary>兼容旧 UI 的便捷属性</summary>
-	public uint Wood => GetAmount(MaterialIds.Wood);
+	public uint Wood => GetAmount(MaterialType.Wood);
 }

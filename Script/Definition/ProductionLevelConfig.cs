@@ -13,8 +13,8 @@ public partial class ProductionLevelConfig : Resource
 	public float IntervalSeconds { get; set; } = 10.0f;
 
 	[Export]
-	public uint MaterialId { get; set; } = MaterialIds.Wood;
+	public uint Amount { get; set; } = 1;
 
 	[Export]
-	public uint Amount { get; set; } = 1;
+	public MaterialType MaterialId { get; set; } = MaterialType.Wood;
 }
