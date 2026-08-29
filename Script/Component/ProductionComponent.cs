@@ -14,7 +14,7 @@ public partial class ProductionComponent : Node
 	public int Level { get; set; } = 1;
 
 	[Export]
-	public ProductionLevelConfig[] ProductionTable { get; set; } = Array.Empty<ProductionLevelConfig>();
+	public ProductionLevelConfig[] ProductionTable { get; set; } = [];
 
 	private IInventory _inventory;
 	private Timer _timer;
@@ -27,7 +27,7 @@ public partial class ProductionComponent : Node
 
 	public void Configure(ProductionLevelConfig[] table, int level = 1)
 	{
-		ProductionTable = table ?? Array.Empty<ProductionLevelConfig>();
+		ProductionTable = table ?? [];
 		Level = level;
 	}
 
@@ -54,7 +54,7 @@ public partial class ProductionComponent : Node
 			_timer.Timeout += OnProductionTick;
 		}
 
-		_timer.WaitTime = config.IntervalSeconds;
+		_timer.WaitTime = Mathf.Max(0.1f, config.IntervalSeconds);
 		_timer.Start();
 		_running = true;
 	}

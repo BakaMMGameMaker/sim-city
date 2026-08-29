@@ -21,15 +21,13 @@ public partial class BuildController : Node3D
 	public Button CancelButton;
 
 	[Export]
-	public Button ResidentialButton;
-
-	[Export]
-	public Button LumberMillButton;
+	public VBoxContainer BuildListVBox;
 
 	[Export]
 	public Label WoodLabel;
 
 	private readonly HashSet<Vector2I> _occupiedCells = new();
+	private readonly List<Node> _buildListDynamicNodes = new();
 
 	private enum Mode { Idle, Dragging, Confirming }
 	private Mode _mode = Mode.Idle;
@@ -37,7 +35,6 @@ public partial class BuildController : Node3D
 	private Building _preview;
 	private bool _previewValid;
 	private Vector2I? _lastOriginCell;
-	private BuildingType _selectedType = BuildingType.Residential;
 	private BuildingDefinition _selectedDef;
 
 	private IInventory _inventory;
@@ -56,10 +53,7 @@ public partial class BuildController : Node3D
 		ConfirmButton.Pressed += OnConfirmPressed;
 		CancelButton.Pressed += OnCancelPressed;
 
-		if (ResidentialButton != null)
-			ResidentialButton.Pressed += () => OnSelectBuilding(BuildingType.Residential);
-		if (LumberMillButton != null)
-			LumberMillButton.Pressed += () => OnSelectBuilding(BuildingType.LumberMill);
+		RebuildBuildList();
 
 		if (Inventory.Instance != null)
 		{
@@ -105,20 +99,64 @@ public partial class BuildController : Node3D
 		}
 	}
 
-	private void OnSelectBuilding(BuildingType type)
+	private void OnSelectBuilding(BuildingDefinition def)
 	{
 		if (_mode != Mode.Idle) return;
+		if (def == null) return;
 
-		_selectedType = type;
-		_selectedDef = DefaultBuildingDefinitions.Get(type);
+		_selectedDef = def;
 
 		if (!_inventory.CanAfford(_selectedDef.Costs))
 		{
-			GD.Print($"材料不足，无法建造 {type}");
+			GD.Print($"材料不足，无法建造 {def.DisplayName}");
 			return;
 		}
 
 		StartDragging();
+	}
+
+	/// <summary>根据 BuildingDefinitionDatabase 动态生成建造列表按钮。</summary>
+	private void RebuildBuildList()
+	{
+		if (BuildListVBox == null) return;
+
+		foreach (var node in _buildListDynamicNodes)
+		{
+			if (IsInstanceValid(node))
+				node.QueueFree();
+		}
+		_buildListDynamicNodes.Clear();
+
+		var definitions = BuildingDefinitionDatabase.All;
+		if (definitions.Count == 0)
+		{
+			var hint = new Label
+			{
+				Text = "未找到建筑定义\n请在编辑器中配置"
+			};
+			_buildListDynamicNodes.Add(hint);
+			BuildListVBox.AddChild(hint);
+			return;
+		}
+
+		foreach (var def in definitions)
+		{
+			var button = new Button
+			{
+				CustomMinimumSize = new Vector2(140, 50),
+				Text = MakeButtonText(def),
+				TooltipText = def.Id
+			};
+			button.Pressed += () => OnSelectBuilding(def);
+			_buildListDynamicNodes.Add(button);
+			BuildListVBox.AddChild(button);
+		}
+	}
+
+	private static string MakeButtonText(BuildingDefinition def)
+	{
+		var costs = MaterialNames.FormatCosts(def.Costs);
+		return costs.Length > 0 ? $"{def.DisplayName} ({costs})" : def.DisplayName;
 	}
 
 	private void StartDragging()

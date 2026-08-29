@@ -3,6 +3,7 @@ using Godot;
 namespace MySimCity;
 
 [GlobalClass]
+[Tool]
 public partial class MaterialAmount : Resource
 {
 	[Export]

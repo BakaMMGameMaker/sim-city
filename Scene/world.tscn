@@ -38,15 +38,14 @@ shadow_enabled = true
 [node name="GridVisualizer" type="Node3D" parent="." unique_id=563093344]
 script = ExtResource("4_grid")
 
-[node name="BuildController" type="Node3D" parent="." unique_id=550515201 node_paths=PackedStringArray("Camera", "ConfirmPanel", "ConfirmButton", "CancelButton", "ResidentialButton", "LumberMillButton", "WoodLabel")]
+[node name="BuildController" type="Node3D" parent="." unique_id=550515201 node_paths=PackedStringArray("Camera", "ConfirmPanel", "ConfirmButton", "CancelButton", "BuildListVBox", "WoodLabel")]
 script = ExtResource("3_build")
 BuildingScene = ExtResource("1_emx41")
 Camera = NodePath("../Camera3D")
 ConfirmPanel = NodePath("../UI/ConfirmPanel")
 ConfirmButton = NodePath("../UI/ConfirmPanel/HBox/ConfirmBtn")
 CancelButton = NodePath("../UI/ConfirmPanel/HBox/CancelBtn")
-ResidentialButton = NodePath("../UI/BuildList/VBox/ResidentialBtn")
-LumberMillButton = NodePath("../UI/BuildList/VBox/LumberMillBtn")
+BuildListVBox = NodePath("../UI/BuildList/VBox")
 WoodLabel = NodePath("../UI/MaterialsPanel/WoodLabel")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1381073999]
@@ -82,16 +81,6 @@ layout_mode = 2
 layout_mode = 2
 text = "建筑物列表"
 horizontal_alignment = 1
-
-[node name="ResidentialBtn" type="Button" parent="UI/BuildList/VBox" unique_id=2041983620]
-custom_minimum_size = Vector2(140, 50)
-layout_mode = 2
-text = "住宅 (12 原木)"
-
-[node name="LumberMillBtn" type="Button" parent="UI/BuildList/VBox" unique_id=1456141472]
-custom_minimum_size = Vector2(140, 50)
-layout_mode = 2
-text = "伐木场 (5 原木)"
 
 [node name="ConfirmPanel" type="PanelContainer" parent="UI" unique_id=1502436122]
 visible = false

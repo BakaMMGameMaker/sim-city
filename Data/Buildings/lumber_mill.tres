@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://Script/Data/BuildingDefinition.cs" id="1_def"]
+[ext_resource type="Script" path="res://Script/Data/MaterialAmount.cs" id="2_amt"]
+[ext_resource type="Script" path="res://Script/Data/ProductionLevelConfig.cs" id="3_prod"]
+
+[sub_resource type="Resource" id="MaterialAmount_wood5"]
+script = ExtResource("2_amt")
+MaterialId = 1
+Amount = 5
+
+[sub_resource type="Resource" id="Production_l1"]
+script = ExtResource("3_prod")
+Level = 1
+IntervalSeconds = 12.0
+Amount = 2
+MaterialId = 1
+
+[sub_resource type="Resource" id="Production_l2"]
+script = ExtResource("3_prod")
+Level = 2
+IntervalSeconds = 10.0
+Amount = 3
+MaterialId = 1
+
+[sub_resource type="Resource" id="Production_l3"]
+script = ExtResource("3_prod")
+Level = 3
+IntervalSeconds = 8.0
+Amount = 5
+MaterialId = 1
+
+[resource]
+script = ExtResource("1_def")
+Id = "lumber_mill"
+DisplayName = "伐木场"
+SortOrder = 1
+Width = 3.6
+Depth = 3.2
+Height = 4.2
+BuildTime = 7.0
+FoundationSize = Vector2i(4, 4)
+BodyAlign = 1
+BodyOffsetX = 0.2
+BodyOffsetZ = 0.15
+Costs = Array[ExtResource("2_amt")]([SubResource("MaterialAmount_wood5")])
+ProductionTable = Array[ExtResource("3_prod")]([SubResource("Production_l1"), SubResource("Production_l2"), SubResource("Production_l3")])

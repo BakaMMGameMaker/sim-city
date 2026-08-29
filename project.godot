@@ -29,6 +29,10 @@ window/stretch/aspect="expand"
 
 project/assembly_name="MySimCity"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/building_definitions/plugin.cfg")
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

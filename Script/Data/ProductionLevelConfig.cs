@@ -3,6 +3,7 @@ using Godot;
 namespace MySimCity;
 
 [GlobalClass]
+[Tool]
 public partial class ProductionLevelConfig : Resource
 {
 	[Export]
@@ -12,8 +13,8 @@ public partial class ProductionLevelConfig : Resource
 	public float IntervalSeconds { get; set; } = 10.0f;
 
 	[Export]
-	public uint Amount { get; set; } = 1;
+	public uint MaterialId { get; set; } = MaterialIds.Wood;
 
 	[Export]
-	public uint MaterialId { get; set; } = MaterialIds.Wood;
+	public uint Amount { get; set; } = 1;
 }
