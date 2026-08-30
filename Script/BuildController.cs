@@ -35,7 +35,7 @@ public partial class BuildController : Node3D
 	private Building _preview;
 	private bool _previewValid;
 	private Vector2I? _lastOriginCell;
-	private BuildingDefinition _selectedDef;
+	private IBuildingDefinition _selectedDef;
 
 	private IInventory _inventory;
 	private BuildingFactory _buildingFactory;
@@ -103,7 +103,7 @@ public partial class BuildController : Node3D
 		}
 	}
 
-	private void OnSelectBuilding(BuildingDefinition def)
+	private void OnSelectBuilding(IBuildingDefinition def)
 	{
 		if (_mode != Mode.Idle) return;
 		if (def == null) return;
@@ -149,7 +149,7 @@ public partial class BuildController : Node3D
 			{
 				CustomMinimumSize = new Vector2(140, 50),
 				Text = MakeButtonText(def),
-				TooltipText = def.Id
+				TooltipText = def.Id.ToString()
 			};
 			button.Pressed += () => OnSelectBuilding(def);
 			_buildListDynamicNodes.Add(button);
@@ -157,7 +157,7 @@ public partial class BuildController : Node3D
 		}
 	}
 
-	private static string MakeButtonText(BuildingDefinition def)
+	private static string MakeButtonText(IBuildingDefinition def)
 	{
 		var costs = MaterialDatabase.FormatCosts(def.Costs);
 		return costs.Length > 0 ? $"{def.DisplayName} ({costs})" : def.DisplayName;

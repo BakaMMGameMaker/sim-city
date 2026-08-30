@@ -8,6 +8,6 @@ namespace MySimCity;
 /// </summary>
 public interface IProducibleBuilding : IUpgradable
 {
-	/// <summary>建造完成时触发。订阅方（如产出组件）只订阅自己持有者的该事件。</summary>
+	/// <summary>建造完成时触发。</summary>
 	event Action ConstructionFinished;
 }

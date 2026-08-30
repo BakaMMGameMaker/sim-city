@@ -2,6 +2,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using MySimCity.Definitions;
 
 namespace MySimCity.EditorTools;
 

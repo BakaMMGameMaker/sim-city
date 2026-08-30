@@ -2,12 +2,15 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using MySimCity.Definitions;
 
 namespace MySimCity.EditorTools;
 
 /// <summary>
 /// 「建筑类型定义」编辑器 Dock：左侧定义列表 + 右侧自绘表单。
 /// 负责 res://Data/Buildings/*.tres 的增删改查与保存。
+/// 建筑 Id 为 uint（自动分配，与文件名一致），列表按 Id 排序。
 /// </summary>
 [Tool]
 public partial class BuildingDefinitionsDock : Control
@@ -23,7 +26,6 @@ public partial class BuildingDefinitionsDock : Control
 
 	private LineEdit _idEdit;
 	private LineEdit _nameEdit;
-	private SpinBox _sortOrderSpin;
 	private SpinBox _widthSpin;
 	private SpinBox _depthSpin;
 	private SpinBox _heightSpin;
@@ -122,15 +124,12 @@ public partial class BuildingDefinitionsDock : Control
 		_idEdit = new LineEdit
 		{
 			Editable = false,
-			TooltipText = "Id 在新建/复制时指定，与文件名一致"
+			TooltipText = "数字 Id：新建/复制时自动分配，作为运行时排序键；文件名约定为 {Id}_{显示名}.tres"
 		};
 		form.AddChild(MakeField("Id", _idEdit));
 		_nameEdit = new LineEdit { PlaceholderText = "住宅" };
 		_nameEdit.TextChanged += _ => MarkDirty();
 		form.AddChild(MakeField("显示名", _nameEdit));
-		_sortOrderSpin = MakeSpin(0, 999, 1);
-		_sortOrderSpin.ValueChanged += _ => MarkDirty();
-		form.AddChild(MakeField("排序", _sortOrderSpin));
 
 		form.AddChild(MakeSection("尺寸"));
 		_widthSpin = MakeSpin(0.1, 100, 0.1, " m");
@@ -269,7 +268,7 @@ public partial class BuildingDefinitionsDock : Control
 		{
 			for (int i = 0; i < _definitions.Count; i++)
 			{
-				if (_definitions[i].Id == selectId)
+				if (_definitions[i].Id.ToString() == selectId)
 				{
 					index = i;
 					break;
@@ -322,13 +321,7 @@ public partial class BuildingDefinitionsDock : Control
 		}
 		dir.ListDirEnd();
 
-		list.Sort((a, b) =>
-		{
-			var byOrder = a.SortOrder.CompareTo(b.SortOrder);
-			return byOrder != 0
-				? byOrder
-				: string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase);
-		});
+		list.Sort((a, b) => a.Id.CompareTo(b.Id));
 
 		return list;
 	}
@@ -346,9 +339,8 @@ public partial class BuildingDefinitionsDock : Control
 		var has = def != null;
 		SetHasSelection(has);
 
-		_idEdit.Text = def?.Id ?? "";
+		_idEdit.Text = def != null ? def.Id.ToString() : "";
 		_nameEdit.Text = def?.DisplayName ?? "";
-		_sortOrderSpin.Value = def?.SortOrder ?? 0;
 		_widthSpin.Value = def?.Width ?? 3.2f;
 		_depthSpin.Value = def?.Depth ?? 3.2f;
 		_heightSpin.Value = def?.Height ?? 12.0f;
@@ -371,7 +363,6 @@ public partial class BuildingDefinitionsDock : Control
 		if (_selected == null) return;
 
 		_selected.DisplayName = _nameEdit.Text.StripEdges();
-		_selected.SortOrder = Mathf.RoundToInt(_sortOrderSpin.Value);
 		_selected.Width = (float)_widthSpin.Value;
 		_selected.Depth = (float)_depthSpin.Value;
 		_selected.Height = (float)_heightSpin.Value;
@@ -379,7 +370,7 @@ public partial class BuildingDefinitionsDock : Control
 		_selected.FoundationSize = new Vector2I(
 			Mathf.RoundToInt(_foundationXSpin.Value),
 			Mathf.RoundToInt(_foundationZSpin.Value));
-		_selected.BodyAlign = (BuildingDefinition.BodyAlignMode)_bodyAlignOption.Selected;
+		_selected.BodyAlign = (BodyAlignMode)_bodyAlignOption.Selected;
 		_selected.BodyOffsetX = (float)_bodyOffsetXSpin.Value;
 		_selected.BodyOffsetZ = (float)_bodyOffsetZSpin.Value;
 		_selected.Costs = CollectCosts();
@@ -441,61 +432,99 @@ public partial class BuildingDefinitionsDock : Control
 		if (table == null) return;
 		foreach (var config in table)
 		{
-			AddProductionRow(
+			AddProductionPanel(
 				config?.Level ?? 1u,
 				config?.IntervalSeconds ?? 10.0f,
-				config?.Amount ?? 1,
-				config?.MaterialId ?? "");
+				config?.Outputs);
 		}
-	}
-
-	private void AddProductionRow(uint level, double interval, uint amount, string materialId)
-	{
-		var row = new HBoxContainer();
-
-		var levelSpin = MakeSpin(1, 99, 1);
-		levelSpin.Value = level;
-		levelSpin.CustomMinimumSize = new Vector2(64, 0);
-
-		var intervalSpin = MakeSpin(0.1, 86400, 0.1, " s");
-		intervalSpin.Value = interval;
-
-		var amountSpin = MakeSpin(1, 100000, 1);
-		amountSpin.Value = amount;
-		amountSpin.CustomMinimumSize = new Vector2(64, 0);
-
-		var material = MakeMaterialOption();
-		EnsureMaterialItem(material, materialId);
-		SelectMaterial(material, materialId);
-
-		var remove = new Button { Text = "✕", CustomMinimumSize = new Vector2(34, 0) };
-		remove.Pressed += () =>
-		{
-			_productionBox.RemoveChild(row);
-			row.QueueFree();
-			MarkDirty();
-		};
-
-		levelSpin.ValueChanged += _ => MarkDirty();
-		intervalSpin.ValueChanged += _ => MarkDirty();
-		amountSpin.ValueChanged += _ => MarkDirty();
-		material.ItemSelected += _ => MarkDirty();
-
-		row.AddChild(levelSpin);
-		row.AddChild(intervalSpin);
-		row.AddChild(amountSpin);
-		row.AddChild(material);
-		row.AddChild(remove);
-		_productionBox.AddChild(row);
 	}
 
 	private void OnAddProductionPressed()
 	{
 		if (_selected == null) return;
-		var all = MaterialDatabase.GetAllNames();
-		var defaultId = all.Count > 0 ? all[0].Id : "";
-		AddProductionRow(1u, 10.0, 1u, defaultId);
+		AddProductionPanel(1u, 10.0, null);
 		MarkDirty();
+	}
+
+	/// <summary>添加一个等级面板：等级 + 间隔 + 若干产出行。</summary>
+	private void AddProductionPanel(uint level, double interval, MaterialAmount[] outputs)
+	{
+		var panel = new VBoxContainer();
+
+		var header = new HBoxContainer();
+		var levelSpin = MakeSpin(1, 99, 1);
+		levelSpin.Value = level;
+		levelSpin.CustomMinimumSize = new Vector2(64, 0);
+		levelSpin.ValueChanged += _ => MarkDirty();
+
+		var intervalSpin = MakeSpin(0.1, 86400, 0.1, " s");
+		intervalSpin.Value = interval;
+		intervalSpin.ValueChanged += _ => MarkDirty();
+
+		var removeLevel = new Button { Text = "✕", CustomMinimumSize = new Vector2(34, 0) };
+		removeLevel.Pressed += () =>
+		{
+			_productionBox.RemoveChild(panel);
+			panel.QueueFree();
+			MarkDirty();
+		};
+
+		header.AddChild(levelSpin);
+		header.AddChild(intervalSpin);
+		header.AddChild(removeLevel);
+		panel.AddChild(header);
+
+		var outputsBox = new VBoxContainer();
+		panel.AddChild(outputsBox);
+
+		var addOutput = new Button { Text = "＋ 添加产出" };
+		addOutput.Pressed += () =>
+		{
+			AddOutputRow(outputsBox);
+			MarkDirty();
+		};
+		panel.AddChild(addOutput);
+
+		if (outputs == null || outputs.Length == 0)
+		{
+			AddOutputRow(outputsBox);
+		}
+		else
+		{
+			foreach (var output in outputs)
+				AddOutputRow(outputsBox, output?.MaterialId ?? "", output?.Amount ?? 1u);
+		}
+
+		_productionBox.AddChild(panel);
+	}
+
+	private void AddOutputRow(VBoxContainer outputsBox, string materialId = null, uint amount = 1)
+	{
+		var row = new HBoxContainer();
+
+		var material = MakeMaterialOption();
+		EnsureMaterialItem(material, materialId ?? "");
+		SelectMaterial(material, materialId ?? "");
+
+		var amountSpin = MakeSpin(1, 100000, 1);
+		amountSpin.Value = amount;
+		amountSpin.CustomMinimumSize = new Vector2(64, 0);
+
+		var remove = new Button { Text = "✕", CustomMinimumSize = new Vector2(34, 0) };
+		remove.Pressed += () =>
+		{
+			outputsBox.RemoveChild(row);
+			row.QueueFree();
+			MarkDirty();
+		};
+
+		material.ItemSelected += _ => MarkDirty();
+		amountSpin.ValueChanged += _ => MarkDirty();
+
+		row.AddChild(material);
+		row.AddChild(amountSpin);
+		row.AddChild(remove);
+		outputsBox.AddChild(row);
 	}
 
 	private MaterialAmount[] CollectCosts()
@@ -518,17 +547,28 @@ public partial class BuildingDefinitionsDock : Control
 		var result = new List<ProducingLevelConfig>();
 		foreach (var child in _productionBox.GetChildren())
 		{
-			if (child is not HBoxContainer row) continue;
-			var levelSpin = row.GetChild<SpinBox>(0);
-			var intervalSpin = row.GetChild<SpinBox>(1);
-			var amountSpin = row.GetChild<SpinBox>(2);
-			var material = row.GetChild<OptionButton>(3);
+			if (child is not VBoxContainer panel) continue;
+			var header = panel.GetChild<HBoxContainer>(0);
+			var outputsBox = panel.GetChild<VBoxContainer>(1);
+			var levelSpin = header.GetChild<SpinBox>(0);
+			var intervalSpin = header.GetChild<SpinBox>(1);
+
+			var outputs = new List<MaterialAmount>();
+			foreach (var outputChild in outputsBox.GetChildren())
+			{
+				if (outputChild is not HBoxContainer row) continue;
+				var material = row.GetChild<OptionButton>(0);
+				var amountSpin = row.GetChild<SpinBox>(1);
+				outputs.Add(new MaterialAmount(
+					material.GetItemMetadata(material.Selected).AsString(),
+					(uint)Mathf.RoundToInt(amountSpin.Value)));
+			}
+
 			result.Add(new ProducingLevelConfig
 			{
 				Level = (uint)Mathf.RoundToInt(levelSpin.Value),
 				IntervalSeconds = (float)intervalSpin.Value,
-				Amount = (uint)Mathf.RoundToInt(amountSpin.Value),
-				MaterialId = material.GetItemMetadata(material.Selected).AsString()
+				Outputs = outputs.ToArray()
 			});
 		}
 		return result.ToArray();
@@ -565,7 +605,7 @@ public partial class BuildingDefinitionsDock : Control
 		var errors = new List<string>(_selected.Validate());
 		foreach (var other in _definitions)
 		{
-			if (other != _selected && string.Equals(other.Id, _selected.Id, StringComparison.OrdinalIgnoreCase))
+			if (other != _selected && other.Id == _selected.Id)
 				errors.Add("Id 与其他定义重复");
 		}
 
@@ -575,10 +615,32 @@ public partial class BuildingDefinitionsDock : Control
 			return false;
 		}
 
+		var targetPath = BuildTargetPath(_selected);
+
 		if (string.IsNullOrEmpty(_selected.ResourcePath))
 		{
-			ShowError("资源路径为空，无法保存");
-			return false;
+			if (ResourceLoader.Exists(targetPath))
+			{
+				ShowError($"目标文件已存在：{targetPath}");
+				return false;
+			}
+			_selected.ResourcePath = targetPath;
+		}
+		else if (!string.Equals(
+			Path.GetFileName(_selected.ResourcePath),
+			Path.GetFileName(targetPath),
+			StringComparison.Ordinal))
+		{
+			// 显示名变化 → 按约定重命名文件（{Id}_{显示名}.tres）
+			var renameErr = DirAccess.RenameAbsolute(
+				ProjectSettings.GlobalizePath(_selected.ResourcePath),
+				ProjectSettings.GlobalizePath(targetPath));
+			if (renameErr != Error.Ok)
+			{
+				ShowError($"重命名文件失败：{renameErr}");
+				return false;
+			}
+			_selected.ResourcePath = targetPath;
 		}
 
 		var err = ResourceSaver.Save(_selected, _selected.ResourcePath);
@@ -599,44 +661,32 @@ public partial class BuildingDefinitionsDock : Control
 	// 新建 / 复制 / 删除
 	// ------------------------------------------------------------------
 
+	/// <summary>自动分配可用 Id：避开当前内存中已加载的全部定义。</summary>
+	private uint FindNextAvailableId()
+	{
+		var used = new HashSet<uint>();
+		foreach (var def in _definitions)
+			used.Add(def.Id);
+
+		for (uint id = 1; id < uint.MaxValue; id++)
+		{
+			if (!used.Contains(id)) return id;
+		}
+		throw new InvalidOperationException("没有可用的建筑 Id");
+	}
+
 	private void OnNewPressed()
 	{
-		ShowIdPrompt("新建建筑类型", "", id =>
-		{
-			if (!IsValidNewId(id, out var error))
-			{
-				ShowError(error);
-				return;
-			}
-			CreateDefinition(id, null);
-		});
+		CreateDefinition(FindNextAvailableId(), null);
 	}
 
 	private void OnDuplicatePressed()
 	{
 		if (_selected == null) return;
-		ShowIdPrompt("复制建筑类型", SuggestCopyId(_selected.Id), id =>
-		{
-			if (!IsValidNewId(id, out var error))
-			{
-				ShowError(error);
-				return;
-			}
-			CreateDefinition(id, _selected);
-		});
+		CreateDefinition(FindNextAvailableId(), _selected);
 	}
 
-	private string SuggestCopyId(string id)
-	{
-		for (int i = 2; ; i++)
-		{
-			var candidate = i == 2 ? $"{id}_copy" : $"{id}_copy{i}";
-			if (!ResourceLoader.Exists($"{BuildingDefinitionDatabase.FolderPath}/{candidate}.tres"))
-				return candidate;
-		}
-	}
-
-	private void CreateDefinition(string id, BuildingDefinition source)
+	private void CreateDefinition(uint id, BuildingDefinition source)
 	{
 		BuildingDefinition def;
 		if (source != null)
@@ -647,10 +697,17 @@ public partial class BuildingDefinitionsDock : Control
 		}
 		else
 		{
-			def = new BuildingDefinition { Id = id, DisplayName = id };
+			def = new BuildingDefinition { Id = id, DisplayName = id.ToString() };
 		}
 
-		var path = $"{BuildingDefinitionDatabase.FolderPath}/{id}.tres";
+		// 文件名自由（约定 {Id}_{显示名}.tres）；目标已存在（外部改动）时换下一个可用 Id
+		var path = BuildTargetPath(def);
+		while (ResourceLoader.Exists(path))
+		{
+			def.Id = FindNextAvailableId();
+			path = BuildTargetPath(def);
+		}
+
 		var err = ResourceSaver.Save(def, path);
 		if (err != Error.Ok)
 		{
@@ -660,7 +717,7 @@ public partial class BuildingDefinitionsDock : Control
 
 		_dirty = false;
 		_selected = null;
-		RefreshList(id);
+		RefreshList(id.ToString());
 	}
 
 	private void OnDeletePressed()
@@ -677,7 +734,14 @@ public partial class BuildingDefinitionsDock : Control
 
 		var path = _pendingDelete.ResourcePath;
 		if (string.IsNullOrEmpty(path))
-			path = $"{BuildingDefinitionDatabase.FolderPath}/{_pendingDelete.Id}.tres";
+		{
+			// 尚未落盘的定义：无文件可删，直接从列表移除
+			_pendingDelete = null;
+			_selected = null;
+			_dirty = false;
+			RefreshList();
+			return;
+		}
 
 		var err = DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
 		if (err != Error.Ok)
@@ -697,74 +761,24 @@ public partial class BuildingDefinitionsDock : Control
 	// 弹窗与工具
 	// ------------------------------------------------------------------
 
-	private bool IsValidNewId(string id, out string error)
+	/// <summary>文件名约定：{Id}_{显示名}.tres（文件名自由，仅编辑器 Dock 维护的约定；运行时按内容 Id 识别）。</summary>
+	private static string BuildTargetPath(BuildingDefinition def)
 	{
-		error = "";
-		if (string.IsNullOrWhiteSpace(id))
-		{
-			error = "Id 不能为空";
-			return false;
-		}
-		if (!DefinitionIdValidation.IsValid(id))
-		{
-			error = DefinitionIdValidation.ErrorMessage;
-			return false;
-		}
-		foreach (var def in _definitions)
-		{
-			if (string.Equals(def.Id, id, StringComparison.OrdinalIgnoreCase))
-			{
-				error = "Id 已存在";
-				return false;
-			}
-		}
-		if (ResourceLoader.Exists($"{BuildingDefinitionDatabase.FolderPath}/{id}.tres"))
-		{
-			error = "同名文件已存在";
-			return false;
-		}
-		return true;
+		return $"{BuildingDefinitionDatabase.FolderPath}/{def.Id}_{SanitizeFileName(def.DisplayName)}.tres";
 	}
 
-	private void ShowIdPrompt(string title, string defaultId, Action<string> onConfirm)
+	private static readonly char[] InvalidFileNameChars = { '\\', '/', ':', '*', '?', '"', '<', '>', '|' };
+
+	private static string SanitizeFileName(string name)
 	{
-		var dialog = new AcceptDialog
+		if (string.IsNullOrWhiteSpace(name)) return "";
+		var chars = name.Trim().ToCharArray();
+		for (int i = 0; i < chars.Length; i++)
 		{
-			Title = title,
-			InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen
-		};
-
-		var content = new VBoxContainer();
-		content.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-		content.OffsetLeft = 12;
-		content.OffsetTop = 12;
-		content.OffsetRight = -12;
-		content.OffsetBottom = -44;
-
-		var hint = new Label
-		{
-			Text = "Id（小写字母开头，仅小写字母/数字/下划线）：",
-			AutowrapMode = TextServer.AutowrapMode.WordSmart
-		};
-		var input = new LineEdit { Text = defaultId, PlaceholderText = "lumber_mill" };
-
-		content.AddChild(hint);
-		content.AddChild(input);
-		dialog.AddChild(content);
-		AddChild(dialog);
-
-		dialog.PopupCentered(new Vector2I(380, 170));
-		input.GrabFocus();
-		input.SelectAll();
-
-		dialog.Confirmed += () =>
-		{
-			var id = input.Text.StripEdges().ToLowerInvariant();
-			if (!string.IsNullOrEmpty(id))
-				onConfirm(id);
-			dialog.QueueFree();
-		};
-		dialog.Canceled += () => dialog.QueueFree();
+			if (Array.IndexOf(InvalidFileNameChars, chars[i]) >= 0)
+				chars[i] = '_';
+		}
+		return new string(chars);
 	}
 
 	private void ShowError(string message)

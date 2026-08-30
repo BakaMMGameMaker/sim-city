@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace MySimCity;
@@ -8,6 +9,7 @@ namespace MySimCity;
 /// <summary>
 /// 材料数据库：从 res://Data/Materials 目录加载 MaterialDefinition。
 /// 材料 Id 为字符串（由 .tres 定义）；未配置显示名时回退为 Id 本身。
+/// 对只读消费方（显示名、成本格式化、引用校验）只暴露 IMaterialDefinition / IMaterialAmount。
 /// </summary>
 public static class MaterialDatabase
 {
@@ -65,6 +67,15 @@ public static class MaterialDatabase
 		return list;
 	}
 
+	/// <summary>
+	/// 已知材料 Id 集合（每次按需求值，不缓存：编辑器会话中新建材料后立刻可见）。
+	/// 供 MaterialAmount / 产出引用等校验使用。
+	/// </summary>
+	public static IReadOnlyCollection<string> GetKnownIds()
+	{
+		return LoadAllFromDisk().Select(def => def.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+	}
+
 	public static string GetDisplayName(string id)
 	{
 		if (string.IsNullOrWhiteSpace(id))
@@ -78,12 +89,12 @@ public static class MaterialDatabase
 		return id;
 	}
 
-	public static IReadOnlyList<MaterialDefinition> GetAllNames()
+	public static IReadOnlyList<IMaterialDefinition> GetAllNames()
 	{
 		return LoadAllFromDisk();
 	}
 
-	public static string FormatCosts(IEnumerable<MaterialAmount> costs)
+	public static string FormatCosts(IEnumerable<IMaterialAmount> costs)
 	{
 		if (costs == null) return "";
 

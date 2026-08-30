@@ -10,7 +10,7 @@ public interface IInventory
 
 	bool TrySpend(string materialId, uint amount);
 
-	bool CanAfford(IEnumerable<MaterialAmount> costs);
+	bool CanAfford(IEnumerable<IMaterialAmount> costs);
 
-	bool TrySpend(IEnumerable<MaterialAmount> costs);
+	bool TrySpend(IEnumerable<IMaterialAmount> costs);
 }

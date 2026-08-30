@@ -1,0 +1,65 @@
+<Project>
+
+  <!--
+    编译后定义资源校验。校验逻辑全部是 C# 工程里的普通代码
+    （Tools/DefinitionRules 规则库 + Tools/DefinitionValidator 校验工具），
+    本文件只负责把它挂到构建上：
+      · 全项目 .tres/.tscn 的 ext_resource res:// 引用必须指向存在的文件；
+      · Data/Materials、Data/Buildings 下的定义逐项执行 DefinitionValidation
+        规则（与游戏运行时 ValidatableResource.Validate 同一份实现）；
+      · 工具以独立进程运行（不加载进 MSBuild，避免程序集被构建节点长期锁定），
+        错误写入 UTF-8 文件后由下方 ReportValidationErrors 逐条 Log.LogError——
+        中文消息不经过控制台编码转换，错误列表可双击跳转到 .tres 对应行，
+        有错误即构建失败。
+    跳过方式：dotnet build /p:ValidateDefinitions=false
+  -->
+
+  <UsingTask TaskName="ReportValidationErrors"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ErrorsFile ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Reference Include="netstandard" />
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        if (File.Exists(ErrorsFile))
+        {
+            foreach (var raw in File.ReadAllLines(ErrorsFile, new UTF8Encoding(false)))
+            {
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                var sep1 = raw.IndexOf('|');
+                var sep2 = sep1 >= 0 ? raw.IndexOf('|', sep1 + 1) : -1;
+                if (sep2 < 0) { Log.LogError(raw); continue; }
+                var file = raw.Substring(0, sep1);
+                var line = 0;
+                int.TryParse(raw.Substring(sep1 + 1, sep2 - sep1 - 1), out line);
+                var message = raw.Substring(sep2 + 1);
+                Log.LogError(null, "MSC_DEF", null, file, line, 0, line, 0, message);
+            }
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="ValidateDefinitions"
+          AfterTargets="Build"
+          Condition="'$(ValidateDefinitions)' != 'false'">
+    <PropertyGroup>
+      <_ValidateErrorsFile>$(IntermediateOutputPath)DefinitionValidation.errors.txt</_ValidateErrorsFile>
+    </PropertyGroup>
+    <MSBuild Projects="$(MSBuildProjectDirectory)\Tools\DefinitionValidator\DefinitionValidator.csproj"
+             Targets="Build" />
+    <Exec Command="dotnet &quot;$(MSBuildProjectDirectory)\Tools\DefinitionValidator\bin\net8.0\DefinitionValidator.dll&quot; --root &quot;$(MSBuildProjectDirectory)&quot; --errors-file &quot;$(_ValidateErrorsFile)&quot;"
+          IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ValidateExitCode" />
+    </Exec>
+    <ReportValidationErrors ErrorsFile="$(_ValidateErrorsFile)" />
+    <Error Condition="'$(_ValidateExitCode)' != '0'"
+           Text="定义资源校验失败（退出码 $(_ValidateExitCode)），详见上方 MSC_DEF 错误。" />
+  </Target>
+
+</Project>

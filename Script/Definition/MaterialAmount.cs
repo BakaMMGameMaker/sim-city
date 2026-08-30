@@ -1,10 +1,13 @@
 using Godot;
+using MySimCity.Definitions;
 
 namespace MySimCity;
 
-[GlobalClass]
+/// <summary>
+/// 材料数量：某材料（字符串 Id）的引用 + 数量，作为成本或产出条目使用。
+/// </summary>
 [Tool]
-public partial class MaterialAmount : Resource
+public partial class MaterialAmount : ValidatableResource, IMaterialAmount
 {
 	[Export]
 	public string MaterialId { get; set; } = "";
@@ -20,5 +23,10 @@ public partial class MaterialAmount : Resource
 	{
 		MaterialId = materialId;
 		Amount = amount;
+	}
+
+	public override string[] Validate()
+	{
+		return DefinitionValidation.ValidateMaterialAmount(MaterialId ?? "", Amount, MaterialDatabase.GetKnownIds);
 	}
 }

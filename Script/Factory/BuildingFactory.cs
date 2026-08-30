@@ -7,8 +7,10 @@ namespace MySimCity;
 /// <summary>
 /// 建筑工厂。
 /// 专门负责实例化非预览的正式建筑：应用定义、定位、开始建造，
-/// 并在产出表非空时创建 ProductionComponent 挂到建筑上
+/// 并在产出表非空时创建 ProducingComponent 挂到建筑上
 /// （组件自行监听 ConstructionFinished 事件启动产出）。
+/// 本工厂是 Godot 场景树的边界：在此处把建筑所在树包装成
+/// ITimerFactory 交给组件，组件本身不依赖具体场景树。
 /// 由 BuildController 注入 IInventory。
 /// </summary>
 public sealed class BuildingFactory
@@ -26,7 +28,7 @@ public sealed class BuildingFactory
 	public Building CreateBuilding(
 		PackedScene buildingScene,
 		Node parent,
-		BuildingDefinition def,
+		IBuildingDefinition def,
 		Vector3 globalPosition)
 	{
 		ArgumentNullException.ThrowIfNull(buildingScene);
@@ -44,7 +46,9 @@ public sealed class BuildingFactory
 		return building;
 	}
 
-	private void AttachProducingComponentIfNeeded(Building building, ProducingLevelConfig[] table)
+	private void AttachProducingComponentIfNeeded(
+		Building building,
+		IReadOnlyList<IProducingLevelConfig> table)
 	{
 		var dict = BuildProductionDict(table);
 		if (dict.Count == 0) return;
@@ -56,29 +60,20 @@ public sealed class BuildingFactory
 			return;
 		}
 
-		_ = new ProducingComponent(building, dict, _inventory, tree);
+		_ = new ProducingComponent(building, dict, _inventory, new SceneTreeTimerFactory(tree));
 	}
 
-	/// <summary>把产出表数组转为 Level → 配置 的字典；跳过非法/重复条目并告警。</summary>
-	public static Dictionary<uint, ProducingLevelConfig> BuildProductionDict(ProducingLevelConfig[] table)
+	private static Dictionary<uint, IProducingLevelConfig> BuildProductionDict(
+		IReadOnlyList<IProducingLevelConfig> table)
 	{
-		var dict = new Dictionary<uint, ProducingLevelConfig>();
+		var dict = new Dictionary<uint, IProducingLevelConfig>();
 		if (table == null) return dict;
 
 		foreach (var config in table)
 		{
 			if (config == null) continue;
-			if (config.Level < 1)
-			{
-				GD.PushWarning($"产出表存在非法等级 {config.Level}，已跳过");
-				continue;
-			}
-			if (dict.ContainsKey(config.Level))
-			{
-				GD.PushWarning($"产出表存在重复等级 {config.Level}，已跳过");
-				continue;
-			}
-			dict.Add(config.Level, config);
+			// 编译期校验已保证等级唯一；重复时覆盖而非抛异常，仅作运行时防御
+			dict[config.Level] = config;
 		}
 		return dict;
 	}

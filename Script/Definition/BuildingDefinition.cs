@@ -1,33 +1,22 @@
 using Godot;
 using System.Collections.Generic;
+using MySimCity.Definitions;
 
 namespace MySimCity;
 
 /// <summary>
-/// 建筑类型定义。以 .tres 资源形式存放在 res://Data/Buildings/，
-/// 由编辑器插件（addons/definitions_editor）可视化维护，运行时经
-/// BuildingDefinitionDatabase 数据驱动加载。
-/// [Tool]：编辑器加载本资源时按本类型实例化（否则会退化为基础 Resource）。
+/// 建筑数据定义。以 .tres 资源形式存放在 res://Data/Buildings/，
+/// 文件名约定为 {Id}_{显示名}.tres，
+/// 运行时按内容中的 Id 识别，经 BuildingDefinitionDatabase 加载。
 /// </summary>
-[GlobalClass]
 [Tool]
-public partial class BuildingDefinition : Resource
+public partial class BuildingDefinition : ValidatableResource, IBuildingDefinition
 {
-	/// <summary>身体网格相对地基的对齐方式。</summary>
-	public enum BodyAlignMode
-	{
-		Center,
-		Offset
-	}
-
 	[Export]
-	public string Id { get; set; } = "";
+	public uint Id { get; set; } = 0;
 
 	[Export]
 	public string DisplayName { get; set; } = "";
-
-	[Export]
-	public int SortOrder { get; set; } = 0;
 
 	[Export]
 	public float Width { get; set; } = 3.2f;
@@ -59,22 +48,63 @@ public partial class BuildingDefinition : Resource
 	[Export]
 	public ProducingLevelConfig[] ProductionTable { get; set; } = [];
 
-	/// <summary>校验定义是否可保存/可加载。返回错误描述列表，为空表示合法。</summary>
-	public string[] Validate()
+	IReadOnlyList<IMaterialAmount> IBuildingDefinition.Costs => Costs;
+
+	IReadOnlyList<IProducingLevelConfig> IBuildingDefinition.ProductionTable => ProductionTable;
+
+	public override string[] Validate()
 	{
-		var errors = new List<string>();
+		return DefinitionValidation.ValidateBuilding(
+			new BuildingData(
+				Id,
+				DisplayName,
+				Width,
+				Depth,
+				Height,
+				BuildTime,
+				FoundationSize.X,
+				FoundationSize.Y,
+				BodyAlign,
+				BodyOffsetX,
+				BodyOffsetZ,
+				ToCostData(Costs),
+				ToProductionData(ProductionTable)),
+			MaterialDatabase.GetKnownIds);
+	}
 
-		if (string.IsNullOrWhiteSpace(DisplayName))
-			errors.Add("显示名不能为空");
-		if (!DefinitionIdValidation.IsValid(Id))
-			errors.Add(DefinitionIdValidation.ErrorMessage);
-		if (FoundationSize.X < 1 || FoundationSize.Y < 1)
-			errors.Add("地基尺寸不能小于 1");
-		if (Width <= 0f || Depth <= 0f || Height <= 0f)
-			errors.Add("宽/深/高必须大于 0");
-		if (BuildTime <= 0f)
-			errors.Add("建造时间必须大于 0");
+	private static IReadOnlyList<MaterialAmountData> ToCostData(IReadOnlyList<MaterialAmount> costs)
+	{
+		var list = new List<MaterialAmountData>();
+		if (costs == null) return list;
 
-		return [.. errors];
+		foreach (var cost in costs)
+		{
+			if (cost == null) continue;
+			list.Add(new MaterialAmountData(cost.MaterialId ?? "", cost.Amount));
+		}
+		return list;
+	}
+
+	private static IReadOnlyList<ProductionLevelData> ToProductionData(IReadOnlyList<ProducingLevelConfig> table)
+	{
+		var list = new List<ProductionLevelData>();
+		if (table == null) return list;
+
+		foreach (var config in table)
+		{
+			if (config == null) continue;
+
+			var outputs = new List<MaterialAmountData>();
+			if (config.Outputs != null)
+			{
+				foreach (var output in config.Outputs)
+				{
+					if (output == null) continue;
+					outputs.Add(new MaterialAmountData(output.MaterialId ?? "", output.Amount));
+				}
+			}
+			list.Add(new ProductionLevelData(config.Level, config.IntervalSeconds, outputs));
+		}
+		return list;
 	}
 }

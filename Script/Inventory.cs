@@ -49,7 +49,7 @@ public partial class Inventory : Node, IInventory
 		return true;
 	}
 
-	public bool CanAfford(IEnumerable<MaterialAmount> costs)
+	public bool CanAfford(IEnumerable<IMaterialAmount> costs)
 	{
 		if (costs == null) return true;
 		foreach (var cost in costs)
@@ -61,7 +61,7 @@ public partial class Inventory : Node, IInventory
 		return true;
 	}
 
-	public bool TrySpend(IEnumerable<MaterialAmount> costs)
+	public bool TrySpend(IEnumerable<IMaterialAmount> costs)
 	{
 		if (costs == null) return true;
 		var list = costs.Where(c => c != null).ToList();

@@ -4,5 +4,14 @@
     <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
-  <Import Project="ValidateResPaths.targets" />
+  <ItemGroup>
+    <!-- Tools 目录是独立的 .NET 工程（规则库/校验工具），不属于游戏程序集 -->
+    <Compile Remove="Tools\**\*.cs" />
+    <!-- 定义校验规则库（纯 C#，运行时与编译期共用） -->
+    <ProjectReference Include="Tools\DefinitionRules\DefinitionRules.csproj" />
+    <!-- 编译期校验工具（Tools/DefinitionValidator）不在此引用：由
+         ValidateDefinitions.targets 在校验目标内按需构建，避免其
+         exe/运行资产被 ProjectReference 复制进游戏输出目录 -->
+  </ItemGroup>
+  <Import Project="ValidateDefinitions.targets" />
 </Project>
